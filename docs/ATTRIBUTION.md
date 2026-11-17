@@ -17,6 +17,7 @@
 | 词条数据 | `www/atlas/index.json`、`www/atlas/entries/`（73 个分片）、`www/atlas/word-atlas.json` | 7,298 词条：释义、英文释义、例句、译文、搭配、词族、近反义词、记忆提示、难度分级与话题分类 |
 | 插画 | `www/atlas/img/`（7,298 幅）、`www/atlas/thumb/`（7,298 幅） | 原版田野图鉴风格插画及缩略图 |
 | 录音 | `www/atlas/audio/`（22,905 段） | 英音/美音单词发音、日常例句、雅思例句录音（ElevenLabs "Alice"/"Sarah" 合成） |
+| 环境声与音效 | `www/sfx/`（24 段，含 `amb-stars.mp3` 等 7 种循环环境声） | 参考项目 `public/sfx/`；星空音乐等循环声与 UI 提示音，按 CC BY 4.0 署名 |
 | 品牌素材 | `www/brand/` | 参考项目品牌图 |
 | 界面设计 | `www/atlas.css`、`www/wordatlas.js` | 「纸墨」设计令牌、顶栏、图鉴画廊、词条详情、配色与排版方案的适配实现 |
 | 字体 | Fraunces（随参考项目） | SIL Open Font License 1.1 |
@@ -30,6 +31,9 @@
 3. **离线发音接入**：将 word-atlas 的英美单词录音与例句录音接入 GoldWord 原有发音流程，保留原 TTS / GPT 管线作为词库外单词的兜底。
 4. **图鉴与详情**：新增难度（A1–C2）、话题（19 类）筛选，中英文搜索，词条详情弹层与一键加入学习卡。
 5. **主页交互优化**：紧凑信息条、单行按钮组与「语言风格」二级菜单、个人中心层级修复、底部状态两行化。
+6. **环境声移植**：将参考项目的 Web Audio 无缝循环与朗读时 ducking 逻辑移植为 `www/ambience.js`，
+   并沿用其 7 种环境声音频；纸墨主题的下拉选择器重新实现。
+7. **统一视觉规范**：新增 `docs/DESIGN-SYSTEM.md`，将设置面板、注册/登录层等旧界面全部纳入纸墨令牌。
 
 ## 本项目原有部分 / Original work
 

@@ -23,10 +23,9 @@ android/app/*.jks
 *.keystore
 *.jks
 
-# Third-party atlas assets (fetch with scripts/fetch-atlas-assets.sh)
+# Download cache and generated Android web assets.
+# Source assets (www/atlas, www/brand, www/sfx) ARE committed so one clone is complete.
 .cache/
-www/atlas/
-www/brand/
 android/app/src/main/assets/public/
 
 # Build outputs and local scratch files

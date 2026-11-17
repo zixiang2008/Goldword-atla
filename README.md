@@ -48,7 +48,8 @@ Goldword-atlas 是一个**离线优先**的英语单词学习应用：在原有 
 - **纸墨主题**：米黄纸底、衬线标题、颗粒质感、赭石/青蓝配色，深浅主题可切换。
 - **7,298 词条**：分级 A1–C2、19 个话题，原创插画 7,298 幅、缩略图 7,298 幅。
 - **22,905 段离线录音**：英音/美音单词发音、日常例句、雅思例句，音标旁喇叭直接播放。
-- **图鉴画廊**：按难度与话题筛选、中英文搜索、词条详情弹层、一键加入学习卡。
+- **图鉴画廊**：按难度与话题筛选、中英文搜索、词条详情弹层、一键加入学习卡；插画优先的大图卡片网格。
+- **环境声 / 背景音乐**：顶栏 ♪ 入口提供星空音乐、雨天图书馆、清晨海岸、林间早晨、夜晚壁炉、远航船舱、安静咖啡馆 7 种环境声，可调音量；朗读单词时自动压低（duck），关闭选择即静音。
 - **完整映射**：卡片背面融入多义项释义、英文释义、例句与译文、搭配、词族、近/反义词、记忆提示、难度与话题标签。
 
 ## 快速开始
@@ -61,18 +62,11 @@ cd Goldword-atla
 npm install
 ```
 
-### 2. 拉取离线词库资源（必需）
+### 2. 离线资源（已随仓库提供）
 
-出于仓库体积与 upstream 授权考虑，**7,298 插画 + 22,905 段录音不随代码入库**。克隆后运行：
+**7,298 插画 + 22,905 段录音 + 24 段环境声/提示音已全部提交进本仓库**，克隆后无需额外下载即可构建与离线使用。
 
-```bash
-# macOS / Linux / Git Bash
-bash scripts/fetch-atlas-assets.sh
-
-# Windows 双击：scripts\fetch-atlas-assets.cmd
-```
-
-脚本会从 [Word Atlas 官方仓库](https://github.com/H1DDENADM1N/word-atlas) 下载源码包，提取 `atlas/`（index.json、entries、img、thumb、audio）与 `brand/` 到 `www/`，并校验文件数量。首次下载约 566 MB，落盘约 726 MB；已有缓存会复用，不会重复下载。
+`scripts/fetch-atlas-assets.sh` 仍保留，用于从 [Word Atlas 官方仓库](https://github.com/H1DDENADM1N/word-atlas) 重新拉取/更新上游资源；它会覆盖 `www/atlas/`、`www/brand/`，并校验文件数量。
 
 > 详细步骤、目录映射与离线构建说明见 **[docs/BUILD.md](docs/BUILD.md)**。
 
@@ -96,16 +90,19 @@ cd android && ./gradlew assembleRelease
 ├── www/                      # Capacitor Web 根目录
 │   ├── index.html            # 主页 / 卡片 / 图鉴 / 设置面板
 │   ├── app.js, ui.js, db.js  # 原有 GoldWord 核心逻辑与卡片翻页
-│   ├── atlas.css             # word-atlas「纸墨」设计系统（覆盖原内联样式）
+│   ├── atlas.css             # word-atlas「纸墨」设计系统（唯一视觉令牌来源）
 │   ├── wordatlas.js          # 融合层：数据映射 / 离线音频 / 图鉴 / 语言风格菜单
+│   ├── ambience.js           # 环境声（Web Audio 无缝循环 + 朗读 ducking）
 │   ├── ATTRIBUTION.md        # 内容署名
-│   ├── atlas/                # ⬅ 拉取脚本生成，不入库（index/entries/img/thumb/audio）
-│   └── brand/                # ⬅ 拉取脚本生成，不入库
+│   ├── atlas/                # 词库 / 插画 / 缩略图 / 录音（随仓库提供）
+│   ├── brand/                # 参考项目品牌图
+│   └── sfx/                  # 环境声与提示音（随仓库提供）
 ├── scripts/
-│   ├── fetch-atlas-assets.sh # 一键拉取 upstream 资源
+│   ├── fetch-atlas-assets.sh # 从 upstream 重新拉取资源（可选）
 │   └── fetch-atlas-assets.cmd# Windows 包装器
 ├── android/                  # Capacitor Android 工程
 ├── docs/
+│   ├── DESIGN-SYSTEM.md      # 设计与代码规范（最高准则）
 │   ├── DISCLAIMER.md         # 完整免责声明（参照 upstream 条款）
 │   ├── ATTRIBUTION.md        # 完整署名与修改说明
 │   ├── BUILD.md              # 构建 / 签名 / 安装 / 排错
@@ -121,7 +118,7 @@ cd android && ./gradlew assembleRelease
 | JDK | 21（Gradle 8.13 / AGP 8.13） |
 | Android SDK | API 36（compileSdk / targetSdk） |
 | 设备 | Android 8.0+，平板优先；首次安装建议预留 2 GB 空间 |
-| 磁盘 | 源码约 20 MB + 词库资源约 726 MB |
+| 磁盘 | 仓库约 650 MB（含词库资源），构建再预留 2 GB |
 
 ## 参考来源与致谢
 

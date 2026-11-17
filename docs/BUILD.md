@@ -22,7 +22,8 @@ cd Goldword-atla
 npm install
 ```
 
-仓库**不包含** 726 MB 词库资源（37,576 个文件），需要单独拉取：
+仓库**已包含**全部资源（约 642 MB、37,628 个文件：`atlas/`、`brand/`、`sfx/`），克隆后直接构建即可。
+下列脚本仅用于从上游**更新/重新拉取**资源：
 
 ```bash
 # macOS / Linux / Git Bash
@@ -37,7 +38,8 @@ bash scripts/fetch-atlas-assets.sh
 1. 下载 [H1DDENADM1N/word-atlas](https://github.com/H1DDENADM1N/word-atlas) `main` 分支源码包到 `.cache/word-atlas-main.tar.gz`（约 566 MB，已有则复用）；
 2. 解压到 `.cache/word-atlas-main/`；
 3. 复制 `public/atlas/index.json`、`data/word-atlas.json` 及 `entries/`、`img/`、`thumb/`、`audio/` 到 `www/atlas/`，`public/brand/` 到 `www/brand/`；
-4. 校验插画、录音、词条分片数量，任一缺失即以非零码退出。
+4. 复制 `public/sfx/` 到 `www/sfx/`（环境声与提示音）；
+5. 校验插画、录音、词条分片、环境声文件数量，任一缺失即以非零码退出。
 
 可用环境变量：`ATLAS_REF=main` 指定分支/commit，缓存目录固定为项目根下 `.cache/`（已加入 `.gitignore`）。
 

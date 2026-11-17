@@ -11,8 +11,9 @@ License (CC BY 4.0)**.
 - License: CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
 - Attribution: **Word Atlas contributors (词光)**
 
-Bundled assets live under `atlas/` (index.json, entries/, img/, thumb/, audio/)
-and are used with the design system adapted into `atlas.css` / `wordatlas.js`.
+Bundled assets live under `atlas/` (index.json, entries/, img/, thumb/, audio/),
+`brand/`, and `sfx/` (seven looping ambience tracks and short UI cues), and are
+used with the design system adapted into `atlas.css` / `wordatlas.js` / `ambience.js`.
 
 The GoldWord application code, spaced-repetition logic, GPT integration, user
 accounts and settings remain the original work of the GoldWord project.

@@ -41,7 +41,8 @@ for required in \
   public/atlas/img \
   public/atlas/thumb \
   public/atlas/audio \
-  public/brand; do
+  public/brand \
+  public/sfx; do
   [ -e "$EXTRACT_DIR/$required" ] || fail "missing expected upstream path: $required"
 done
 
@@ -56,18 +57,21 @@ for dir in entries img thumb audio; do
   cp -r "$EXTRACT_DIR/public/atlas/$dir/." "$ROOT_DIR/www/atlas/$dir/"
 done
 
-log "Copying brand assets..."
-mkdir -p "$ROOT_DIR/www/brand"
+log "Copying brand and ambience assets..."
+mkdir -p "$ROOT_DIR/www/brand" "$ROOT_DIR/www/sfx"
 cp -r "$EXTRACT_DIR/public/brand/." "$ROOT_DIR/www/brand/"
+cp -r "$EXTRACT_DIR/public/sfx/." "$ROOT_DIR/www/sfx/"
 
 img_count="$(find "$ROOT_DIR/www/atlas/img"    -type f | wc -l | tr -d '[:space:]')"
 audio_count="$(find "$ROOT_DIR/www/atlas/audio" -type f | wc -l | tr -d '[:space:]')"
 entry_count="$(find "$ROOT_DIR/www/atlas/entries" -type f | wc -l | tr -d '[:space:]')"
+sfx_count="$(find "$ROOT_DIR/www/sfx" -type f | wc -l | tr -d '[:space:]')"
 
-log "Verifying: images=$img_count audio=$audio_count entries=$entry_count"
+log "Verifying: images=$img_count audio=$audio_count entries=$entry_count sfx=$sfx_count"
 [ "$img_count"  -ge 7000  ] || fail "too few illustrations: $img_count"
 [ "$audio_count" -ge 20000 ] || fail "too few recordings: $audio_count"
 [ "$entry_count" -ge 50    ] || fail "too few entry chunks: $entry_count"
+[ "$sfx_count"  -ge 20    ] || fail "too few ambience files: $sfx_count"
 
 log "DONE. Next steps:"
 log "  npx cap sync android"

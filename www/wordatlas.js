@@ -247,6 +247,20 @@
     var wordText = field(word, ['word', '单词', '词', '英文', 'en']);
     var left = [], right = [];
 
+    // ---- Word Atlas reference header: specimen number, level/topic and illustration ----
+    // The back page must carry the complete reference entry, not only the text fields.
+    if (ref) {
+      var heroChips = '<div class="wa-chips">' +
+        (ref.cefr ? '<span class="chip chip-level lv-' + esc(ref.cefr) + '">' + esc(ref.cefr) + '</span>' : '') +
+        (ref.topicZh ? '<span class="chip chip-topic">' + esc(ref.topicZh) + '</span>' : '') + '</div>';
+      var heroArt = Atlas.img(ref);
+      left.push('<div class="wa-back-hero">' +
+        '<p class="wa-specimen">№ ' + String(ref.order + 1).padStart(4, '0') + ' <i></i> WORD ATLAS</p>' +
+        heroChips +
+        (heroArt ? '<img class="wa-back-art" src="' + esc(heroArt) + '" alt="' + esc(wordText) + ' 插画" loading="lazy">' : '') +
+        '</div>');
+    }
+
     // ---- RIGHT column: original GoldWord layout (word / chinese / phonetic / pos / memo / assoc) ----
     var chinese = field(word, ['chinese', 'translation', '中文解释', '中文', '释义']);
     var phonetic = field(word, ['phonetic', 'pronunciation', '音标']) || (ref ? ref.ipa : '');
@@ -262,8 +276,12 @@
 
     right.push('<div class="right-word">' + esc(wordText) + '</div>');
     right.push('<div class="wa-field"><span class="label">中文解释</span><span class="value">' + esc(chinese) + '</span></div>');
-    right.push('<div class="wa-field"><span class="label">音标</span><span class="value">' + esc(phonetic) + '</span> ' +
-      '<button type="button" class="wa-inline-speak" data-wa-audio="' + esc(ref ? (Atlas.audio(ref, currentAccent()) || '') : '') + '" data-wa-text="' + esc(wordText) + '">🔊</button></div>');
+    // Both reference pronunciations (UK + US) with their own offline recordings.
+    var prons = [];
+    if (entry && entry.uk) prons.push('<button type="button" data-wa-audio="' + esc(Atlas.audio(ref, 'uk') || '') + '" data-wa-text="' + esc(wordText) + '"><em>英</em><span class="ipa">' + esc(entry.uk) + '</span> 🔊</button>');
+    if (entry && entry.us) prons.push('<button type="button" data-wa-audio="' + esc(Atlas.audio(ref, 'us') || '') + '" data-wa-text="' + esc(wordText) + '"><em>美</em><span class="ipa">' + esc(entry.us) + '</span> 🔊</button>');
+    if (!prons.length && phonetic) prons.push('<button type="button" data-wa-audio="' + esc(ref ? (Atlas.audio(ref, currentAccent()) || '') : '') + '" data-wa-text="' + esc(wordText) + '"><em>IPA</em><span class="ipa">' + esc(phonetic) + '</span> 🔊</button>');
+    right.push('<div class="wa-field"><span class="label">音标</span><span class="value wa-pron">' + prons.join('') + '</span></div>');
     right.push('<div class="wa-field"><span class="label">词性</span><span class="value">' + esc(pos) + '</span></div>');
     right.push('<hr class="wa-sep">');
     right.push('<div class="wa-field"><span class="label">记忆要点</span><span class="value">' + esc(memo) + '</span></div>');
@@ -286,7 +304,7 @@
     // Examples — prefer atlas ex/ex2, fall back to GoldWord structured examples
     var examples = [];
     if (entry && entry.ex && entry.ex.length) {
-      examples = entry.ex.slice(0, 3).map(function (x, i) {
+      examples = entry.ex.map(function (x, i) {
         return { en: x.en, zh: x.zh, tag: entry.ex.length > 1 ? (i ? '雅思语境' : '日常') : '',
           audio: i === 0 ? Atlas.audio(ref, 'ex') : (i === 1 ? Atlas.audio(ref, 'ex2') : null) };
       });
@@ -308,7 +326,7 @@
     // Collocations
     var cols = [];
     if (entry && entry.col && entry.col.length) {
-      cols = entry.col.slice(0, 6).map(function (c) { var p = splitPair(c); return { en: p.en, zh: p.zh }; });
+      cols = entry.col.map(function (c) { var p = splitPair(c); return { en: p.en, zh: p.zh }; });
     } else {
       var c0 = (word && Array.isArray(word.collocations)) ? word.collocations
         : field(word, ['collocation', '固定搭配', '搭配']);
@@ -325,7 +343,7 @@
 
     // Relations: family / synonyms / antonyms
     var rel = [];
-    if (entry && entry.fam && entry.fam.length) rel.push('<div><h3 class="wa-eyebrow">词族</h3><div class="wa-field">' + entry.fam.map(function (f) { return esc(f); }).join(' · ') + '</div></div>');
+    if (entry && entry.fam && entry.fam.length) rel.push('<div><h3 class="wa-eyebrow">词族 · Family</h3><div class="wa-field">' + entry.fam.map(function (f) { return esc(typeof f === 'string' ? f : (f.word || f.text || '')); }).join(' · ') + '</div></div>');
     if (entry && entry.syn && entry.syn.length) rel.push('<div><h3 class="wa-eyebrow">近义</h3><div class="wa-field">' + entry.syn.map(function (f) { return esc(typeof f === 'string' ? f : f.word); }).join(' · ') + '</div></div>');
     if (entry && entry.ant && entry.ant.length) rel.push('<div><h3 class="wa-eyebrow">反义</h3><div class="wa-field">' + entry.ant.map(function (f) { return esc(typeof f === 'string' ? f : f.word); }).join(' · ') + '</div></div>');
     if (rel.length) left.push(rel.join(''));
@@ -410,10 +428,11 @@
           renderBack(word, ref, entry);
         });
       } else {
-        // not in Word Atlas → original GPT-driven GoldWord rendering path
+        // not in Word Atlas → original GPT-driven GoldWord rendering path.
+        // Do NOT prefetch word-atlas.json here: it is 7.8 MB and no caller
+        // actually uses it. Loading it blocked the first card on cold start.
         renderFront(wordText, null, null);
         renderBack(word, null, null);
-        Atlas.loadFull(); // warm cache for later lookups
       }
       try { if (UI.updateStats) UI.updateStats(); } catch (_) {}
     };
@@ -431,7 +450,10 @@
   // ======================================================================
   // Gallery ("图鉴") + word sheet
   // ======================================================================
-  var gallery = { filterLevel: '', filterTopic: '', status: 'all', query: '', limit: 60 };
+  var gallery = {
+    filterLevel: '', filterTopic: '', status: 'all', query: '',
+    limit: 60, batch: 60, _key: '', _cache: null, _list: null
+  };
 
   function buildFilters() {
     var box = document.getElementById('waFilters');
@@ -457,13 +479,17 @@
   }
 
   function filteredWords() {
+    var key = gallery.filterLevel + '|' + gallery.filterTopic + '|' + gallery.query;
+    if (key === gallery._key && gallery._cache) return gallery._cache;
     var q = norm(gallery.query);
-    return Atlas.words.filter(function (w) {
+    gallery._cache = Atlas.words.filter(function (w) {
       if (gallery.filterLevel && w.cefr !== gallery.filterLevel) return false;
       if (gallery.filterTopic && w.topic !== gallery.filterTopic) return false;
       if (q && norm(w.word).indexOf(q) < 0 && String(w.zh).indexOf(gallery.query) < 0) return false;
       return true;
     });
+    gallery._key = key;
+    return gallery._cache;
   }
 
   function wordCardObj(ref, entry) {
@@ -479,26 +505,46 @@
     };
   }
 
-  function renderGallery() {
+  function makeTile(w) {
+    var img = Atlas.img(w, 'thumb');
+    var tile = document.createElement('button');
+    tile.type = 'button';
+    tile.className = 'wa-tile';
+    tile.innerHTML =
+      '<div class="illo">' + (img ? '<img loading="lazy" decoding="async" src="' + esc(img) + '" alt="' + esc(w.word) + '">' : '') +
+      (w.cefr ? '<span class="chip chip-level lv-' + esc(w.cefr) + ' wa-tile-lv">' + esc(w.cefr) + '</span>' : '') + '</div>' +
+      '<div class="wa-tile-text"><span class="wa-tile-word">' + esc(w.word) + '</span>' +
+      '<span class="wa-tile-zh">' + esc(w.zh) + '</span></div>';
+    tile.onclick = function () { openWord(w.id); };
+    return tile;
+  }
+
+  /** Incremental rendering: only newly revealed tiles are created, old DOM is kept. */
+  function renderGallery(reset) {
     var grid = document.getElementById('waTiles');
     var meta = document.getElementById('waGalleryMeta');
     if (!grid || !Atlas.ready) return;
     var list = filteredWords();
-    if (meta) meta.textContent = list.length.toLocaleString() + ' 个结果 · 显示全部原创插画，点击任意词卡开始学习';
+    if (reset !== false || gallery._list !== list) {
+      gallery.limit = gallery.batch;
+      grid.innerHTML = '';
+    }
+    gallery._list = list;
     var shown = list.slice(0, gallery.limit);
-    grid.innerHTML = shown.map(function (w) {
-      var img = Atlas.img(w, 'thumb');
-      return '<button type="button" class="wa-tile" data-wa-id="' + esc(w.id) + '">' +
-        '<div class="illo">' + (img ? '<img loading="lazy" src="' + esc(img) + '" alt="' + esc(w.word) + '">' : '') +
-        (w.cefr ? '<span class="chip chip-level lv-' + esc(w.cefr) + ' wa-tile-lv">' + esc(w.cefr) + '</span>' : '') + '</div>' +
-        '<div class="wa-tile-text"><span class="wa-tile-word">' + esc(w.word) + '</span>' +
-        '<span class="wa-tile-zh">' + esc(w.zh) + '</span></div></button>';
-    }).join('');
-    grid.querySelectorAll('[data-wa-id]').forEach(function (tile) {
-      tile.onclick = function () { openWord(tile.getAttribute('data-wa-id')); };
-    });
+    var have = grid.children.length;
+    if (shown.length > have) {
+      var frag = document.createDocumentFragment();
+      for (var i = have; i < shown.length; i++) frag.appendChild(makeTile(shown[i]));
+      grid.appendChild(frag);
+    } else if (shown.length < have) {
+      while (grid.children.length > shown.length) grid.removeChild(grid.lastChild);
+    }
+    if (meta) meta.textContent = list.length.toLocaleString() + ' 个结果 · 已显示 ' + shown.length + ' 个 · 原创插画，点击任意词卡开始学习';
     var more = document.getElementById('waMore');
-    if (more) { more.style.display = shown.length < list.length ? 'block' : 'none'; more.textContent = '显示更多（已显示 ' + shown.length + ' / ' + list.length + '）'; }
+    if (more) {
+      more.style.display = shown.length < list.length ? 'block' : 'none';
+      more.textContent = '显示更多（' + shown.length + ' / ' + list.length + '）';
+    }
   }
 
   function openWord(id) {
@@ -589,17 +635,40 @@
     });
     // Search
     var search = document.getElementById('waSearch');
+    var searchTimer = null;
     if (search) {
       search.addEventListener('input', function () {
-        gallery.query = search.value.trim(); gallery.limit = 60;
-        if (document.getElementById('waView-atlas').classList.contains('is-on')) renderGallery();
+        var value = search.value.trim();
+        if (searchTimer) clearTimeout(searchTimer);
+        searchTimer = setTimeout(function () {
+          gallery.query = value;
+          var atlasView = document.getElementById('waView-atlas');
+          if (atlasView && atlasView.classList.contains('is-on')) renderGallery();
+        }, 160);
       });
       search.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') { switchView('atlas'); renderGallery(); }
       });
     }
     var more = document.getElementById('waMore');
-    if (more) more.onclick = function () { gallery.limit += 60; renderGallery(); };
+    function loadMore() {
+      var list = filteredWords();
+      if (gallery.limit >= list.length) return;
+      gallery.limit = Math.min(list.length, gallery.limit + gallery.batch * 2);
+      renderGallery(false);
+    }
+    if (more) more.onclick = loadMore;
+    // Auto-reveal the next batch while scrolling, without blocking the main thread.
+    var scrollTimer = null;
+    window.addEventListener('scroll', function () {
+      if (scrollTimer) return;
+      scrollTimer = setTimeout(function () {
+        scrollTimer = null;
+        var atlasView = document.getElementById('waView-atlas');
+        if (!atlasView || !atlasView.classList.contains('is-on')) return;
+        if (more && more.style.display !== 'none' && more.getBoundingClientRect().top < window.innerHeight + 500) loadMore();
+      }, 120);
+    }, { passive: true });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') closeSheet();
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); switchView('atlas'); var s = document.getElementById('waSearch'); if (s) s.focus(); }

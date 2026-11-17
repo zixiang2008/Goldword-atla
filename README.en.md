@@ -37,7 +37,8 @@ The interface design, dataset, illustrations and recordings in this project are 
 - "Paper & ink" visual system: warm cream background, serif headings, paper grain, terracotta/teal accents, light and dark themes.
 - 7,298 headwords with CEFR levels A1–C2 and 19 topics, 7,298 illustrations plus thumbnails.
 - 22,905 offline recordings: UK/US word pronunciation, everyday examples and IELTS-style examples.
-- Atlas gallery with level/topic filters, Chinese/English search, detail sheet and one-tap add to study deck.
+- Atlas gallery with level/topic filters, Chinese/English search, detail sheet and one-tap add to study deck; illustration-first field-guide tiles.
+- Ambient background sound: seven scenes (starlight, rainy library, coast, forest, fireplace, voyage, cafe) with volume control and automatic ducking while words are spoken.
 - Card back maps the full entry: senses, English definitions, examples and translations, collocations, word family, synonyms/antonyms, memory tips, level and topic tags.
 
 ## Quick start
@@ -50,7 +51,7 @@ bash scripts/fetch-atlas-assets.sh   # Windows: double-click scripts\fetch-atlas
 npx serve www                         # or: npx cap sync android && cd android && ./gradlew assembleRelease
 ```
 
-The 726 MB asset set is **not committed** to this repository; the fetch script downloads and verifies it from the [official Word Atlas repository](https://github.com/H1DDENADM1N/word-atlas). See [docs/BUILD.md](docs/BUILD.md) for full build, signing, installation and troubleshooting instructions.
+The ~642 MB asset set (illustrations, audio, ambience) is **committed in this repository**, so one clone is enough to build and use the app offline. The optional fetch script can refresh assets from the [official Word Atlas repository](https://github.com/H1DDENADM1N/word-atlas). See [docs/BUILD.md](docs/BUILD.md) for full build, signing, installation and troubleshooting instructions.
 
 ## Credits and licensing
 
