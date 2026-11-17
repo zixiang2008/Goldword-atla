@@ -1,0 +1,3 @@
+# Keep shell scripts with LF endings so they run on Windows Git Bash and Unix alike.
+*.sh text eol=lf
+*.cmd text eol=crlf

@@ -1,0 +1,43 @@
+.backups/
+node_modules
+.toolchains/
+.android-sdk/
+local-config/
+*.apk
+*.aab
+
+# Local Netlify folder
+.netlify
+downloads/
+releases/
+dist/
+*.log
+.DS_Store
+android/**/build/
+android/**/outputs/
+android/app/*.keystore
+android/app/*.jks
+
+# Local credentials and signing material - NEVER commit
+.env
+*.keystore
+*.jks
+
+# Third-party atlas assets (fetch with scripts/fetch-atlas-assets.sh)
+.cache/
+www/atlas/
+www/brand/
+android/app/src/main/assets/public/
+
+# Build outputs and local scratch files
+outputs/
+build.sh
+q*.sh
+scripts/sec*.txt
+scripts/remove_apiyi.py
+scripts/update_*.py
+scripts/*_snippet.txt
+scripts/find_*.py
+scripts/patch_*.py
+scripts/fix_*.py
+scripts/add_link.py

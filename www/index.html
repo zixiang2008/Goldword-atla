@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Goldword-atlas — 每一个记住的单词，都是一枚金币</title>
+    <!-- Removed external Google Fonts to avoid ORB errors -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icons/icon-192x192.png">
+    <meta name="theme-color" content="#007aff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Goldword-atlas">
+    <link rel="apple-touch-icon" href="icons/icon-152x152.svg">
+    <style>
+        :root {
+            --content-width: 90vw;
+            --button-font-size: clamp(0.85em, 1.8vw, 1em);
+            --button-padding: 10px 16px;
+            --primary: #007AFF;
+            --success: #34C759;
+            --secondary: #F0F4FF;
+            --bg: #FAF9F7;
+            --text: #333;
+            --text-muted: #888;
+            --border: #E8E8E8;
+            --radius: 12px;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'SF Pro Display', 'SF Pro Text', sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #fff;
+            padding: 24px 20px;
+            box-sizing: border-box;
+            color: var(--text);
+        }
+        
+        .review-button {
+            margin-top: 15px;
+            padding: var(--button-padding);
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: var(--button-font-size);
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .review-button:hover {
+            background-color: #ff5252;
+        }
+        .flashcard-container {
+            perspective: 1000px;
+            width: var(--content-width);
+            /* 动态高度由 JS 计算：占满除下方按钮与信息栏外的剩余空间 */
+            height: auto;
+            min-height: 60vh; /* 首屏兜底，避免云端初始渲染过小 */
+            position: relative;
+            margin: 16px 0 20px 0;
+            border-radius: var(--radius);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+        .flashcard {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            transform-style: preserve-3d;
+            transition: transform 0.6s ease, opacity 0.3s ease;
+            border-radius: var(--radius);
+            background-color: #fff;
+        }
+        .flashcard.flipped {
+            transform: rotateY(180deg);
+            opacity: 1;
+        }
+        .flashcard-front, .flashcard-back {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: var(--radius);
+            padding: 30px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        .flashcard-front {
+            background: #fff;
+            color: var(--text);
+            /* 覆盖通用的居中，采用上下布局以实现 2/3 单词区域 */
+            justify-content: flex-start;
+            align-items: stretch;
+            flex-direction: column;
+        }
+        /* 正面单词区域：占卡片高度 2/3 */
+        .front-word-area {
+            flex: 0 0 66.666%;
+            height: 66.666%;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        /* 正面详情区域：剩余 1/3 */
+        .flashcard-front .details {
+            flex: 1 0 33.333%;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        /* 正面单词更大字号并居中显示 */
+        .flashcard-front .word {
+            font-size: clamp(2.2em, 9vh, 6.2em);
+            margin: 0;
+            white-space: nowrap;
+        }
+        /* 单词放大动画 */
+        @keyframes wordScaleIn {
+            0% { transform: scale(0.6); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .front-word.scale-in { animation: wordScaleIn 600ms ease-out forwards; }
+
+        .flashcard-back {
+            background: #fff;
+            color: var(--text);
+            transform: rotateY(180deg);
+            align-items: flex-start;
+            /* 让背面内容两列占满卡片区域 */
+            padding: 0;
+            overflow-y: auto;
+        }
+        /* 背面两列布局与配色（恢复旧版并调整右侧行序） */
+        .flashcard-back .word { display: none; }
+            .back-columns { display: grid; grid-template-columns: 3fr 2fr; gap: 0; width: 100%; height: 100%; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+        .back-left { background: #fff; padding: 14px; border-right: 1px solid var(--border); }
+        .back-right { background: var(--secondary); padding: 14px; display: flex; flex-direction: column; min-height: 100%; }
+        .back-right .right-word { font-family: 'Inter', 'SF Pro Display', -apple-system, sans-serif; font-weight: 700; font-size: clamp(2.25em, 4.8vw, 40px); color: var(--primary); flex: 0 0 auto; display: flex; align-items: center; justify-content: flex-start; word-wrap: break-word; overflow-wrap: break-word; }
+        .back-right .right-chinese, .back-right .right-phonetics, .back-right .right-pos, .back-right .right-memoassoc { font-size: clamp(1em, 2vw, 1.125em); color: var(--text); margin-top: 6px; }
+        .back-right .right-memoassoc { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+
+        .word {
+            font-size: clamp(2.25em, 6vw, 36px);
+            font-weight: 700;
+            margin: 0 0 12px 0;
+            text-align: center;
+            color: var(--primary);
+        }
+        .details {
+            font-size: clamp(1em, 2vw, 1.125em);
+            text-align: left;
+            line-height: 1.6;
+            max-width: 95%;
+        }
+        /* 顶部 .word 不显示，单词显示在右列的第一行（right-word） */
+        .flashcard-back .details {
+            text-align: left;
+            max-width: 100%;
+            width: 100%;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            flex: 1;
+            height: 100%;
+            padding: 0;
+            overflow-y: auto;
+            font-size: clamp(1em, 2vw, 1.125em);
+            line-height: 1.6;
+        }
+        /* 两列占满容器高度 */
+        .back-left, .back-right { height: 100%; }
+        .details .label { color: var(--text); font-weight: 600; margin-right: 6px; }
+        .details .value { color: var(--text); }
+        .details .row {
+            margin: 6px 0;
+        }
+        /* 新增：标题-正文独立块样式 */
+        .details .block { margin: 10px 0; }
+        .details .heading { color: #8b5c3e; font-weight: 700; }
+        .details .content { color: #5a3b2a; margin-top: 4px; white-space: pre-wrap; }
+        #gpt-brief-block { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .controls { display: flex; flex-direction: column; align-items: center; gap: 12px; width: var(--content-width); }
+        /* 第一行五个主按钮：自动播放、翻转、记得、朗读、学习模式 */
+        .buttons { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)); grid-auto-rows: 1fr; gap: 10px; width: 100%; }
+        /* 第二行五项：倒计时、英/英式、中文口音、倍速、个人中心（单行等宽缩放） */
+        .buttons-secondary { display: grid; grid-template-columns: repeat(5, minmax(80px, 1fr)); grid-auto-rows: 1fr; gap: 10px; width: 100%; }
+        .auto-play-controls { display: none; }
+        .review-buttons {
+            display: none;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            width: var(--content-width);
+            max-height: 20vh;
+            overflow-y: auto;
+        }
+        body.card-flipped .review-buttons {
+            display: flex;
+        }
+        button, select {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: var(--button-padding);
+            font-size: var(--button-font-size);
+            font-weight: 600;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            cursor: pointer;
+            color: var(--text);
+            background-color: #fff;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            min-height: 44px;
+            transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+            touch-action: manipulation;
+        }
+        /* 双行按钮（垂直排列文字） */
+        .two-line-btn { flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; text-align: center; }
+        .two-line-btn .sub { font-weight: 500; color: var(--text); opacity: 0.9; font-size: calc(var(--button-font-size) * 0.9); }
+        button:hover, select:hover { transform: scale(0.98); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+        button:active, select:active { transform: scale(0.97); }
+        .flip-button, .next-button, .correct-button, .incorrect-button { color: #fff; border-color: transparent; }
+        .flip-button { background-color: var(--primary); }
+        .next-button { background-color: var(--primary); }
+        /* 朗读按钮：默认白底蓝字，开启时蓝底白字 */
+        .speak-button { background: #fff; color: var(--primary); border: 1px solid var(--border); }
+        .correct-button { background-color: #22c55e; }
+        .correct-button:hover { background-color: #16a34a; }
+        .incorrect-button { background-color: #ef4444; }
+        .incorrect-button:hover { background-color: #dc2626; }
+        .review-button { background-color: #5856d6; color: #fff; border-color: transparent; }
+        /* 记得按钮：点击后绿色显示，并在下一词恢复默认蓝色 */
+        #addNewWordBtn.active { background-color: #22c55e; color: #fff; border-color: transparent; }
+        #addNewWordBtn.active:hover { background-color: #16a34a; }
+        /* 自动播放按钮：默认白色，开启时为主色 */
+        .auto-button { background: #fff; color: var(--primary); border: 1px solid var(--border); }
+        .auto-on.auto-button { background: var(--primary); color: #fff; border-color: transparent; }
+        /* 覆盖：背面右侧复习按钮靠左，矩形且支持激活态（紧随联想行显示，不再吸附底部） */
+        .back-right .review-button { align-self: flex-start; padding: var(--button-padding); border-radius: var(--radius); display: inline-flex; align-items: center; gap: 8px; font-size: var(--button-font-size); background: #fff; color: var(--primary); border: 1px solid var(--border); }
+        .back-right .review-button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .back-right .review-button .icon { width: 20px; height: 20px; color: currentColor; }
+        /* 右侧单词区域：独立块，宽度100%，由JS动态适配字号 */
+        .back-right .right-word { display: block; width: 100%; font-weight: 800; line-height: 1.05; }
+        select { appearance: none; padding-right: 35px; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><path fill="%23333" d="M7 10l5 5 5-5z"/></svg>'); background-repeat: no-repeat; background-position: right 12px center; }
+        .speech-rate, .accent { background-color: #fff; }
+        .icon {
+            width: 20px;
+            height: 20px;
+            fill: white;
+        }
+        .stats { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; width: var(--content-width); padding: 12px; background-color: #fff; border-radius: var(--radius); box-shadow: 0 2px 8px rgba(0,0,0,0.08); font-size: clamp(12px, 1.6vw, 14px); color: var(--text-muted); gap: 8px; }
+        .countdown-left { position: absolute; left: 0; top: 50%; transform: translateY(-50%); font-weight: 800; line-height: 1; color: var(--primary); pointer-events: none; text-align: left; padding-left: 1ch; }
+        .stats div {
+            text-align: center;
+        }
+        /* 统一两行信息的上下边距，以当前上边距为基准 */
+        .stats-row { margin: 4px 0; }
+        .progress-container { width: 100%; background-color: #f3f3f5; border-radius: 8px; height: 8px; overflow: hidden; }
+        .progress-bar { height: 100%; background-color: var(--primary); transition: width 0.3s ease; }
+        /* 信息栏内联进度条（用于与复习进度百分比对应） */
+                .inline-progress { display:block; width: 100%; height: 8px; background:#f3f3f5; border-radius: 8px; vertical-align: middle; margin-left: 6px; overflow:hidden; }
+                .inline-progress-bar { height:100%; background: var(--primary); width: 0%; transition: width 0.3s ease; }
+        .auto-indicator { width: 10px; height: 10px; border-radius: 50%; background: #ccc; display: inline-block; margin-left: 6px; }
+        .auto-on .auto-indicator { background: #34c759; box-shadow: 0 0 0 3px rgba(52,199,89,0.2); }
+        @media (max-width: 600px) {
+            .flashcard-container {
+                width: 95vw;
+                /* 移动端使用动态高度；保证最小可见面积 */
+                height: auto;
+                min-height: 52vh;
+            }
+            .word {
+                font-size: clamp(1.4em, 5vw, 2.2em);
+            }
+            .details {
+                font-size: clamp(0.85em, 3vw, 1.1em);
+            }
+            button, select {
+                padding: 10px 16px;
+                font-size: clamp(0.75em, 2vw, 0.9em);
+            }
+            .progress-container {
+                height: 8px;
+            }
+            .icon {
+                width: 18px;
+                height: 18px;
+            }
+            .buttons { grid-template-columns: repeat(2, 1fr); }
+            .buttons-secondary { grid-template-columns: repeat(3, 1fr); }
+            .stats-row { flex-wrap: wrap !important; }
+            body { padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
+        }
+        @media (max-width: 430px) {
+            .buttons { grid-template-columns: repeat(2, 1fr); }
+            .buttons-secondary { grid-template-columns: repeat(2, 1fr); }
+            :root { --content-width: 95vw; }
+        }
+        @media (max-width: 480px) {
+            .buttons { grid-template-columns: repeat(2, 1fr); }
+            .buttons-secondary { grid-template-columns: repeat(2, 1fr); }
+            :root { --content-width: 95vw; }
+        }
+        @media (max-width: 375px) {
+            .buttons { grid-template-columns: 1fr; }
+            .buttons-secondary { grid-template-columns: 1fr 1fr; }
+        }
+
+        /* ===== 个人中心面板：单页设置 + 章节快捷跳转 ===== */
+        .settings-sections { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; border-top: 1px solid #f0f0f2; padding-top: 10px; }
+        .settings-jump {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 7px 13px; border-radius: 20px;
+            background: #f2f2f7; color: #555;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            border: 1px solid transparent; transition: background .15s, color .15s;
+        }
+        .settings-jump:hover { background: #e5e5ea; }
+        .settings-jump.active { background: var(--primary); color: #fff; }
+        .settings-panels { margin-top: 14px; }
+        .settings-panel-section {
+            display: flex; flex-direction: column; gap: 12px;
+            scroll-margin-top: 132px;
+            animation: settingsFadeIn .18s ease;
+        }
+        .settings-section-head {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 15px; font-weight: 700; color: #1c1c1e;
+            margin: 2px 0 0 0;
+        }
+        .settings-section-head::before {
+            content: ""; display: inline-block; width: 4px; height: 16px;
+            border-radius: 2px; background: var(--primary); flex: 0 0 auto;
+        }
+        @keyframes settingsFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+        .settings-card { background: #fff; border: 1px solid #eef0f4; border-radius: 12px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+        /* 宽面板下：词库管理区多卡片并排；数据统计区数字等宽分栏 */
+        .settings-panel-section#panel-words { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); align-items: stretch; }
+        .settings-panel-section#panel-words .settings-card { margin: 0; }
+        .settings-stats-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important; }
+        .settings-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+        .settings-field { width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; background: #fff; color: #1c1c1e; font-size: 14px; }
+        .settings-hint { font-size: 12px; color: #888; line-height: 1.5; }
+        @media (max-width: 600px) {
+            .settings-content { width: 94vw !important; padding: 12px !important; }
+            .settings-jump { padding: 6px 10px; font-size: 12px; }
+            .settings-sections { gap: 5px; }
+            .settings-panel-section { scroll-margin-top: 120px; }
+        }
+
+        /* 通用按钮按压特效：按下变绿，0.5秒后恢复 */
+        .flip-button.pressed,
+        .next-button.pressed,
+        .speak-button.pressed,
+        .correct-button.pressed,
+        .review-button.pressed,
+        .auto-button.pressed {
+            background-color: var(--success) !important;
+            color: #fff !important;
+            border-color: transparent !important;
+        }
+        .flip-button.pressed .icon,
+        .next-button.pressed .icon,
+        .speak-button.pressed .icon,
+        .correct-button.pressed .icon,
+        .review-button.pressed .icon,
+        .auto-button.pressed .icon { color: #fff !important; }
+
+        /* 状态按钮切换颜色 */
+        .flip-button.toggled,
+        .speak-button.toggled {
+            background-color: var(--primary);
+            color: #fff;
+            border-color: transparent;
+        }
+        .flip-button.toggled .icon,
+        .speak-button.toggled .icon { color: #fff; }
+
+        /* 类型B按钮动画：定义10种动画效果 */
+        /* 1. 涟漪扩散 Ripple */
+        .anim-ripple { position: relative; overflow: hidden; }
+        .anim-ripple::after {
+            content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+            width: 0; height: 0; border-radius: 50%; background: rgba(255,255,255,0.4);
+            animation: ripple 500ms ease-out forwards;
+        }
+        @keyframes ripple { from { width:0; height:0; opacity:0.6; } to { width:300px; height:300px; opacity:0; } }
+
+        /* 2. 脉冲跳动 Pulse */
+        .anim-pulse { animation: pulse 500ms ease-in-out; }
+        @keyframes pulse { 0%{transform:scale(1);} 50%{transform:scale(1.08);} 100%{transform:scale(1);} }
+
+        /* 3. 弹跳 Bounce */
+        .anim-bounce { animation: bounce 600ms cubic-bezier(0.28,0.84,0.42,1); }
+        @keyframes bounce { 0%{transform:translateY(0);} 30%{transform:translateY(-6px);} 60%{transform:translateY(0);} 80%{transform:translateY(-3px);} 100%{transform:translateY(0);} }
+
+        /* 4. 按压缩放 Press */
+        .anim-press { animation: press 180ms ease-out; }
+        @keyframes press { from{transform:scale(0.95);} to{transform:scale(1);} }
+
+        /* 5. 发光高亮 Glow */
+        .anim-glow { animation: glow 600ms ease-out; }
+        @keyframes glow { 0%{box-shadow:0 0 0 rgba(0,0,0,0);} 50%{box-shadow:0 0 18px rgba(0,122,255,0.55);} 100%{box-shadow:0 0 0 rgba(0,0,0,0);} }
+
+        /* 6. 滑动填充 Slide Fill */
+        .anim-slide-fill { position: relative; overflow: hidden; }
+        .anim-slide-fill::before { content:""; position:absolute; left:0; top:0; height:100%; width:0%; background: rgba(0,122,255,0.2); animation: slideFill 400ms ease-out forwards; }
+        @keyframes slideFill { from{width:0%;} to{width:100%;} }
+
+        /* 7. 翻转 Flip */
+        .anim-flip { transform-style: preserve-3d; animation: flip 500ms ease-out; }
+        @keyframes flip { from{transform:rotateY(0deg);} to{transform:rotateY(180deg);} }
+
+        /* 8. 加载圈 Loading Spinner */
+        .anim-spinner { position: relative; color: transparent !important; }
+        .anim-spinner::after { content:""; position:absolute; left:50%; top:50%; transform:translate(-50%, -50%); width:18px; height:18px; border:2px solid rgba(255,255,255,0.6); border-top-color: rgba(255,255,255,1); border-radius:50%; animation: spin 700ms linear infinite; }
+        @keyframes spin { from{ transform:translate(-50%, -50%) rotate(0deg);} to{ transform:translate(-50%, -50%) rotate(360deg);} }
+
+        /* 9. 颜色切换 Colour Swap */
+        .anim-colour-swap { filter: invert(1) hue-rotate(180deg); }
+
+        /* 10. 抬起 Lift */
+        .anim-lift { animation: lift 300ms ease-out; }
+        @keyframes lift { from{ transform:translateY(0); box-shadow:none; } to{ transform:translateY(-3px); box-shadow:0 8px 16px rgba(0,0,0,0.18); } }
+
+
+.right-sep { border: 0; border-top: 1px dashed #c4a484; margin: 8px 0; }
+</style>
+<style>
+  /* 暂停态：渐变橙色背景 */
+  body.paused { background: linear-gradient(135deg, #FFE0B2 0%, #FFB74D 50%, #FF9800 100%); }
+  /* 记得按钮：默认蓝色，激活绿色 */
+  .correct-button.active { background:#2ecc71 !important; color:#fff !important; }
+
+        /* 通用按钮按压特效：按下变绿，0.5秒后恢复 */
+        .flip-button.pressed,
+        .next-button.pressed,
+        .speak-button.pressed,
+        .correct-button.pressed,
+        .review-button.pressed,
+        .auto-button.pressed {
+            background-color: var(--success) !important;
+            color: #fff !important;
+            border-color: transparent !important;
+        }
+        .flip-button.pressed .icon,
+        .next-button.pressed .icon,
+        .speak-button.pressed .icon,
+        .correct-button.pressed .icon,
+        .review-button.pressed .icon,
+        .auto-button.pressed .icon { color: #fff !important; }
+
+        /* 状态按钮切换颜色 */
+        .flip-button.toggled,
+        .speak-button.toggled {
+            background-color: var(--primary);
+            color: #fff;
+            border-color: transparent;
+        }
+        .flip-button.toggled .icon,
+        .speak-button.toggled .icon { color: #fff; }
+
+        /* 增强服务状态指示器（底部简约信息栏） */
+        .enhancement-status {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.9);
+            border-top: 1px solid #e0e0e0;
+            border-left: none;
+            border-right: none;
+            border-bottom: none;
+            padding: 6px 10px;
+            font-size: 12px;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            justify-content: center;
+        }
+        .enhancement-status:hover {
+            background: rgba(255, 255, 255, 1);
+        }
+        .status-indicator {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+        .status-indicator.ready { background: #4caf50; }
+        .status-indicator.working { 
+            background: #ff9800; 
+            animation: pulse 1.5s infinite;
+        }
+        .status-indicator.error { background: #f44336; }
+        .status-indicator.disabled { background: #9e9e9e; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* 移动端避免底栏遮挡内容 */
+        @media (max-width: 768px) {
+            body { padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
+        }
+
+
+.right-sep { border: 0; border-top: 1px dashed #c4a484; margin: 8px 0; }
+</style>
+    <!-- Word Atlas design system: loaded last so it overrides the legacy inline styles -->
+    <link rel="stylesheet" href="atlas.css?v=1">
+</head>
+<body>
+    <!-- ===== Word Atlas 风格顶栏 ===== -->
+    <header class="wa-topbar">
+        <div class="wa-brand">
+            <div class="wa-brand-mark">✦</div>
+            <div class="wa-brand-name">Goldword-atlas<small>词光 · Word Atlas</small></div>
+        </div>
+        <nav class="wa-topnav" aria-label="主导航">
+            <button type="button" class="is-on" data-wa-view="study">今日</button>
+            <button type="button" data-wa-view="atlas">图鉴</button>
+            <button type="button" data-wa-view="me">我的</button>
+        </nav>
+        <div class="wa-topbar-spacer"></div>
+        <label class="wa-search-pill" title="搜索单词或中文释义">
+            <span>🔍</span>
+            <input id="waSearch" type="search" placeholder="搜索单词或中文释义" autocomplete="off">
+            <span class="wa-kbd">⌘K</span>
+        </label>
+        <button type="button" class="wa-icon-btn" id="waThemeBtn" title="切换纸墨 / 夜空主题">🌙</button>
+    </header>
+
+    <!-- ===== 今日：学习卡片视图 ===== -->
+    <div id="waView-study" class="wa-view is-on">
+    <main class="wa-shell">
+        <!-- 紧凑固定信息条：日期 + 金币标语，常驻顶部，压缩高度让卡片更大 -->
+        <section class="wa-hero" id="waHero">
+            <span class="wa-date" id="waDate"></span>
+            <span class="wa-hero-title">每一个记住的单词，都是一枚金币。</span>
+            <span class="wa-hero-count"><span class="wa-count">7,298</span> 词条</span>
+        </section>
+    
+    <div class="flashcard-container">
+        <div class="flashcard" id="flashcard">
+            <div class="flashcard-front">
+                <div class="front-word-area">
+                    <div class="word front-word" id="word">Remote</div>
+                </div>
+                <div class="details" id="front-details">[rɪˈmoʊt] adj.</div>
+            </div>
+            <div class="flashcard-back">
+                <div class="word" id="back-word"></div>
+                <div class="details" id="back-details">
+                    中文: 偏远的; 遥远的<br>
+                    定义: Far away from other places or people.<br>
+                    搭配: Remote island (偏远岛屿)<br>
+                    记忆: 联想 Remote control（遥控器）
+                </div>
+                <button id="dontRememberTopBtn" class="review-button" title="将此单词标记为需要复习，会再次出现在学习列表中">要复习</button>
+            </div>
+        </div>
+    </div>
+    <div class="controls">
+        <!-- 单行功能按钮：主要操作 + 语言风格菜单 + 个人中心 -->
+        <div class="buttons">
+            <button class="next-button auto-button" id="autoPlayBtn" title="自动播放当前卡片流程">▶️ <span data-i18n="buttons.autoPlay"></span><span class="auto-indicator"></span></button>
+            <button class="flip-button">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M4 15h2v3l6-6-6-6v3H4v6zm16-6h-2V6l-6 6 6 6v-3h2v-6z"/>
+                </svg>
+                🔁 <span data-i18n="buttons.flipCard"></span>
+            </button>
+            <button class="correct-button" id="correctBtn" title="记得，进入下一个记忆阶段">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                </svg>
+                <span data-i18n="buttons.remember"></span>
+            </button>
+            <button class="speak-button" title="读当前单词">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                </svg>
+                <span data-i18n="buttons.speakWord"></span>
+            </button>
+            <!-- 语言风格菜单：点击展开二级选项（倒计时/发音/倍速/重复次数），不额外独占一行 -->
+            <div class="wa-style-menu" id="waStyleMenu">
+                <button type="button" class="wa-style-trigger" id="waStyleTrigger" title="语言风格设置" aria-expanded="false" aria-controls="waStylePanel">
+                    🎚 <span>语言风格</span><span class="wa-caret">▾</span>
+                </button>
+                <div class="wa-style-panel" id="waStylePanel" role="menu" aria-hidden="true">
+                    <div class="wa-style-head">语言风格</div>
+                    <div class="wa-style-item">
+                        <label for="countdownTime">⏱ 倒计时</label>
+                        <select class="speech-rate" id="countdownTime" title="设置自动播放倒计时时长">
+                            <option value="1">1秒</option><option value="2">2秒</option>
+                            <option value="3" selected>3秒</option><option value="4">4秒</option>
+                            <option value="5">5秒</option><option value="6">6秒</option>
+                            <option value="7">7秒</option><option value="8">8秒</option>
+                            <option value="9">9秒</option>
+                        </select>
+                    </div>
+                    <div class="wa-style-item">
+                        <label for="accent">🔤 英文发音</label>
+                        <select class="accent" id="accent">
+                            <option value="en-US" selected>美式发音</option>
+                            <option value="en-GB">英式发音</option>
+                        </select>
+                    </div>
+                    <div class="wa-style-item">
+                        <label for="accentZh">🈶 中文发音</label>
+                        <select class="accent-zh" id="accentZh" title="中文发音选择">
+                            <option value="zh-CN" selected>大陆普通话</option>
+                            <option value="zh-TW">台湾普通话</option>
+                            <option value="zh">泛中文</option>
+                        </select>
+                    </div>
+                    <div class="wa-style-item">
+                        <label for="speechRate">⚡ 倍速</label>
+                        <select class="speech-rate" id="speechRate">
+                            <option value="0.4">0.4×</option><option value="0.6">0.6×</option>
+                            <option value="0.8">0.8×</option><option value="1" selected>1.0×</option>
+                            <option value="1.2">1.2×</option><option value="1.4">1.4×</option>
+                            <option value="1.6">1.6×</option><option value="1.8">1.8×</option>
+                            <option value="2">2.0×</option>
+                        </select>
+                    </div>
+                    <div class="wa-style-item">
+                        <label for="learnMode">🔁 重复次数</label>
+                        <select class="speech-rate" id="learnMode" title="学习模式发音顺序">
+                            <option value="en1" selected>英文一次</option>
+                            <option value="en1zh1">英文/中文一次</option>
+                            <option value="en2">英文两次</option>
+                            <option value="en2zh1">英文两次中文一次</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <button id="openAuthPageMainBtn" title="打开个人中心" style="background:#fff; color: var(--text); border: 1px solid var(--border);" data-i18n="buttons.personalCenter"></button>
+        </div>
+        <!-- 复习相关按钮分离到独立一行（在翻转后显示） -->
+        <div class="review-buttons">
+            <button id="dontRememberBtn" class="review-button">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                </svg>
+                👎 <span data-i18n="buttons.dontRemember"></span>
+            </button>
+            <button id="addNewWordBtn" class="review-button" title="标记该词为生词并进入记忆循环">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 3.99 4 6.5 4c1.74 0 3.41 1.01 4.5 2.09C12.09 5.01 13.76 4 15.5 4 18.01 4 20 6 20 8.5c0 3.78-3.4 6.86-8.05 11.54L12 21.35z"/>
+                </svg>
+                👍 <span data-i18n="buttons.addNewWord"></span>
+            </button>
+            <div id="countdown" style="position: absolute; bottom: 10px; left: 10px; font-size: 24px; font-weight: bold; color: var(--primary);"></div>
+        </div>
+        <!-- 底部信息合并为两行：第1行=系统状态/账户/词库/复习，第2行=今日/AI增强/覆盖率/版本 -->
+        <div class="stats">
+            <div id="countdownLeft" class="countdown-left"></div>
+            <div class="stats-row">
+                <span class="enhancement-status" id="enhancementStatus" title="点击查看增强服务状态详情">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    <span id="statusText" data-i18n="app.status.checking"></span>
+                </span>
+                <span class="wa-sep-dot">·</span>
+                <span><span id="currentUserPrefix">👤 当前用户：</span><span id="currentUserLabel">未登录</span></span>
+                <span class="wa-sep-dot">·</span>
+                <span><span id="totalWordsPrefix">📊 总词数：</span><span id="totalWords">296</span></span>
+                <span class="wa-sep-dot">·</span>
+                <span><span id="reviewProgressPrefix">🔁 复习进度：</span><span id="reviewProgress">0%</span></span>
+                <span class="wa-mini-bar"><span id="reviewProgressBar"></span></span>
+                <span id="appVersion" class="wa-hero-version"></span>
+            </div>
+            <div class="stats-row">
+                <span><span id="todayStudyPrefix">📅 今日学习：</span><span id="studiedToday">0</span></span>
+                <span class="wa-sep-dot">·</span>
+                <span>🔁 要复习：<span id="repeatedWords">0</span></span>
+                <span class="wa-sep-dot">·</span>
+                <span id="enhancementProgress">增强服务未启动</span>
+                <span class="wa-mini-bar"><span id="enhancementProgressBar"></span></span>
+                <span class="wa-sep-dot">·</span>
+                <span class="strict-coverage-group"><span id="strictCoveragePrefix">🧪 覆盖率：</span><span id="strictCoverage">0%</span></span>
+                <span class="wa-sep-dot">·</span>
+                <span class="wa-code-ver">📦 V<span id="codeVersion" title="点击查看版本详情">–</span></span>
+            </div>
+        </div>
+
+        <!-- 顶部右上角用户管理入口已移除，仅保留下方菜单栏入口 -->
+    </div>
+    </main>
+    </div><!-- /#waView-study -->
+
+    <!-- ===== 图鉴：词库画廊视图 ===== -->
+    <div id="waView-atlas" class="wa-view">
+    <main class="wa-shell">
+        <section class="wa-head">
+            <div class="wa-date">图鉴 · ATLAS</div>
+            <h2>每个词，都有一幅画。</h2>
+            <p class="wa-lead">14,596 条原创例句 · 英美发音 · 按难度和 19 个话题整理 · 全部内置，断网可用</p>
+        </section>
+        <div class="wa-filters" id="waFilters"></div>
+        <p class="wa-gallery-meta" id="waGalleryMeta"></p>
+        <div class="wa-tiles" id="waTiles"></div>
+        <button type="button" class="wa-more" id="waMore" style="display:none;">显示更多</button>
+    </main>
+    </div>
+
+    <!-- ===== 单词详情弹层 ===== -->
+    <div class="wa-sheet-mask" id="waSheet">
+        <div class="wa-sheet">
+            <button type="button" class="wa-sheet-close" id="waSheetX" aria-label="关闭">✕</button>
+            <div id="waSheetBody"></div>
+            <div class="wa-sheet-actions" id="waSheetActions"></div>
+        </div>
+    </div>
+
+    <div id="settingsPanel" class="settings-panel" style="position: fixed; inset: 0; display: none; background: rgba(0,0,0,0.35); backdrop-filter: blur(2px);" onclick="if(event.target===this)(window.SettingsNav&&SettingsNav.close&&SettingsNav.close())">
+        <div class="settings-content" style="background: #fff; border-radius: 12px; width: 80vw; margin: 6vh auto; padding: 18px 18px 14px 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); max-height: 80vh; overflow-y: auto; box-sizing: border-box;">
+
+            <!-- 顶栏：标题 + 快捷菜单 + 关闭（粘性固定，滚动时保持可见） -->
+            <div style="position: sticky; top: 0; background: #fff; z-index: 5; padding-bottom: 8px;">
+                <div style="display:flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0;">个人中心</h3>
+                    <div style="display:flex; align-items:center; gap:8px; position: relative;">
+                        <button id="settingsUserMenuButton" style="border:none; background:#f2f2f2; border-radius:8px; padding:6px 10px; cursor:pointer;">个人中心 ▾</button>
+                        <div id="settingsUserMenuDropdown" style="display:none; position: absolute; top: 42px; right: 96px; background:#fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); min-width: 220px;">
+                            <button id="settingsMenuUserBtn" style="width:100%; padding:10px 12px; border:none; background:#fff; color: var(--text); text-align: left; cursor:pointer;">用户登录</button>
+                            <button id="settingsMenuAuthBtn" style="width:100%; padding:10px 12px; border:none; background:#fff; color: var(--text); text-align: left; cursor:pointer;">用户注册</button>
+                            <button id="settingsMenuImportBtn" style="width:100%; padding:10px 12px; border:none; background:#fff; color: var(--text); text-align: left; cursor:pointer; display:none;">导入词库</button>
+                            <button id="settingsMenuExportBtn" style="width:100%; padding:10px 12px; border:none; background:#fff; color: var(--text); text-align: left; cursor:pointer; display:none;">导出词库</button>
+                            <div style="border-top:1px solid #eee; margin:6px 0;"></div>
+                            <div style="padding:8px; font-weight:600; color:#555;">界面语言</div>
+                            <button id="langZhBtn" style="width:100%; padding:8px 12px; border:none; background:#fff; color: var(--text); text-align:left; cursor:pointer;">中文</button>
+                            <button id="langEnBtn" style="width:100%; padding:8px 12px; border:none; background:#fff; color: var(--text); text-align:left; cursor:pointer;">English</button>
+                            <button id="langThBtn" style="width:100%; padding:8px 12px; border:none; background:#fff; color: var(--text); text-align:left; cursor:pointer;">ภาษาไทย</button>
+                            <button id="langJaBtn" style="width:100%; padding:8px 12px; border:none; background:#fff; color: var(--text); text-align:left; cursor:pointer;">日本語</button>
+                            <button id="langEsBtn" style="width:100%; padding:8px 12px; border:none; background:#fff; color: var(--text); text-align:left; cursor:pointer;">Español</button>
+                        </div>
+                        <button id="closeSettingsBtn" style="border:none; background:#eee; border-radius:8px; padding:6px 10px; cursor:pointer;">关闭</button>
+                    </div>
+                </div>
+                <!-- 章节快捷跳转（所有设置都在同一页，点击平滑滚动定位） -->
+                <nav class="settings-sections" aria-label="个人中心设置目录">
+                    <button type="button" class="settings-jump" data-jump="panel-account">我的账户</button>
+                    <button type="button" class="settings-jump" data-jump="panel-words">词库管理</button>
+                    <button type="button" class="settings-jump" data-jump="panel-stats">数据统计</button>
+                    <button type="button" class="settings-jump" data-jump="panel-voice">语音测试</button>
+                    <button type="button" class="settings-jump" data-jump="panel-gpt">GPT 设置</button>
+                </nav>
+            </div>
+
+            <!-- 设置区：全部章节在同一页依次展开 -->
+            <div class="settings-panels">
+                <section class="settings-panel-section" id="panel-account">
+            <!-- 登录后用户信息区 -->
+            <div id="userInfoSection" style="display:none; border:1px solid #eee; border-radius:10px; padding:10px; margin-bottom:12px;">
+                <div style="font-weight:600; margin-bottom:6px;">用户信息</div>
+                <div>用户名：<span id="currentUserName">未登录</span></div>
+                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; margin-top:8px;">
+                    <div>近30天学习：<span id="userStats30Days">0</span></div>
+                    <div>近24小时学习：<span id="userStats24Hours">0</span></div>
+                    <div>总进度：<span id="userTotalProgress">0</span>%</div>
+                    <div>今日目标：<span id="userTodayTarget">—</span></div>
+                </div>
+            </div>
+
+            <!-- 未登录提示区（作为兜底；通常由登录模态与注册覆盖层承载） -->
+            <div id="loginFormSection" style="display:none; border:1px dashed #eee; border-radius:10px; padding:10px; margin-bottom:12px;">
+                <div style="color:#666;">您尚未登录，请点击页面下方“个人中心”进行登录或注册。</div>
+            </div>
+
+            <!-- 管理员用户管理区（仅管理员可见） -->
+            <div id="adminPanelSection" style="display:none; border:1px solid #ffd7a8; background:#fffaf3; border-radius:10px; padding:10px; margin-bottom:12px;">
+                <div style="font-weight:600; margin-bottom:6px;">管理员：用户管理</div>
+                <div style="font-size:12px; color:#8a6d3b; margin-bottom:8px;">仅当以管理员账号（caishen）登录时可见。可查看用户、修改密码、删除与拉黑。</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+                    <input id="adminNewUserId" type="text" placeholder="新用户ID" style="padding:6px; border-radius:8px; border:1px solid #ddd;" />
+                    <input id="adminNewUserName" type="text" placeholder="显示名" style="padding:6px; border-radius:8px; border:1px solid #ddd;" />
+                    <input id="adminNewUserPassword" type="text" placeholder="初始PIN/密码" style="padding:6px; border-radius:8px; border:1px solid #ddd;" />
+                    <button id="adminCreateUserBtn" style="background:#007aff; color:#fff; border:none; border-radius:8px; padding:6px 10px; cursor:pointer;">新增/更新用户</button>
+                </div>
+                <div style="font-weight:500; margin-bottom:6px;">已注册用户</div>
+                <div id="adminUsersList" style="display:grid; grid-template-columns: 1fr auto auto auto; gap:6px; align-items:center;"></div>
+            </div>
+            </section>
+            <section class="settings-panel-section" id="panel-words">
+                <div class="settings-card">
+                    <div id="importFileHeader" style="font-weight:600; margin-bottom:6px;">导入文件</div>
+                    <input type="file" id="fileInput" accept=".json,.csv,.xlsx,.xls,.txt" />
+                    <div style="font-size:12px; color:#666; margin-top:6px;">支持格式：JSON（推荐）、CSV、XLSX/XLS、TXT。建议使用标准模板。</div>
+                    <button id="downloadTemplateBtn" style="margin-top:6px; background:#4caf50; color:#fff; border:none; border-radius:8px; padding:6px 10px; cursor:pointer;">下载标准模板（JSON）</button>
+                </div>
+                <div class="settings-card">
+                    <div id="importHeader" style="font-weight:600; margin-bottom:6px;">导入 JSON / 在线批量导入</div>
+                    <textarea id="jsonInput" rows="6" placeholder="在此粘贴：所有单词用英文逗号间隔，例如：apple, banana, cherry" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd;"></textarea>
+                    <div style="font-size:12px; color:#666; margin-top:6px;">提示：可点击下方“GPT 提取单词”自动识别文本中的英文单词并生成英文逗号列表。</div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                        <button id="importJsonBtn" style="background:#007aff; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer;">导入 JSON</button>
+                        <button id="importTextBtn" style="background:#5856d6; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer;">从文本导入</button>
+                        <button id="gptExtractBtn" style="background:#00c4b4; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer;" title="从上方文本中识别英文单词并生成英文逗号列表">GPT 提取单词</button>
+                    </div>
+                </div>
+                <div class="settings-card">
+                    <div style="font-weight:600; margin-bottom:6px;">导出管理</div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button id="exportJsonBtn" style="background:#34c759; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer;">导出当前词库</button>
+                        <button id="clearDataBtn" style="background:#ff3b30; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer;">清空词库</button>
+                        <button id="restoreOriginalBtn" style="background:#007aff; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer;">恢复原始词库</button>
+                    </div>
+                </div>
+            </section>
+            <section class="settings-panel-section" id="panel-stats">
+                <div class="settings-card">
+                    <div style="font-weight:600; margin-bottom:6px;">学习数据</div>
+                    <div class="settings-stats-grid" style="align-items:center;">
+                        <div>总词数：<span id="settingsTotalWords">0</span></div>
+                        <div>复习进度：<span id="settingsReviewProgress">0%</span></div>
+                        <div>严格覆盖率：<span id="settingsStrictCoverage">0%</span></div>
+                    </div>
+                </div>
+            </section>
+            <section class="settings-panel-section" id="panel-voice">
+                <div class="settings-card">
+                    <div id="voiceTestHeader" style="font-weight:600; margin-bottom:8px;">语音测试</div>
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <button id="ttsTestBtn" style="background:#ff9500; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer;">测试语音</button>
+                        <span id="ttsTestStatus" style="color:#555; font-size:14px; min-height:20px;"></span>
+                    </div>
+                </div>
+            </section>
+            <section class="settings-panel-section" id="panel-gpt">
+                <div class="settings-card">
+                    <div style="font-weight:600; margin-bottom:8px;">GPT 服务设置</div>
+                    <div style="display:grid; grid-template-columns: 1fr; gap:8px;">
+<label for="gptModelSelect" style="font-size:14px; color:#555;"><span id="modelLabel">选择内置模型：</span><a href="api-settings-guide.html" target="_blank" style="margin-left:8px; color:#007aff; text-decoration:none;">API设置指导</a><a href="https://api.apiyi.com/register/?aff_code=V1Kp" target="_blank" style="margin-left:8px; color:#007aff; text-decoration:none;">付费GPT模型平台</a></label>
+                        <select id="gptModelSelect" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd;"></select>
+                        <div id="gptHelpInfo" style="font-size:12px; color:#666; background:#f8f9fa; border-radius:8px; padding:8px;">
+从下拉列表选择模型后，将自动填充 API 地址与模型名。文档：<a href="https://docs.apiyi.com/api-manual" target="_blank">https://docs.apiyi.com/api-manual</a> ｜ 资源：<a href="https://docs.apiyi.com/resources#qwen-api-%E6%96%87%E6%A1%A3" target="_blank">Qwen 模型资源</a>
+                        </div>
+                        <input id="gptBaseUrl" type="text" placeholder="API 基础地址，例如 https://api.openai.com" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd;" />
+                        <input id="gptModel" type="text" placeholder="模型名，例如 gpt-4o-mini 或其它免费模型" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd;" />
+                        <input id="gptApiKey" type="password" placeholder="API 密钥（仅本机保存）" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd;" />
+                        <a id="gptApiKeyLink" href="#" target="_blank" style="font-size:12px; color:#007aff; text-decoration:none; display:none;">获取 API Key</a>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                            <select id="gptProviderPreset" style="padding:8px; border-radius:8px; border:1px solid #ddd;">
+                                <option value="custom">自定义 / Custom</option>
+                                <optgroup label="国内平台">
+                                    <option value="caisheng">默认网关 (caishen 登录解锁)</option>
+                                    <option value="zhipu">智谱 GLM</option>
+                                    <option value="siliconflow">硅基流动</option>
+                                    <option value="dashscope">阿里云百炼</option>
+                                    <option value="tokenhub">腾讯云 TokenHub</option>
+                                    <option value="qianfan">百度千帆</option>
+                                    <option value="volcengine">火山方舟</option>
+                                    <option value="deepseek">DeepSeek 官方</option>
+                                    <option value="sensenova">商汤 SenseNova</option>
+                                    <option value="qiniu">七牛云 AI</option>
+                                    <option value="modelscope">魔搭 ModelScope</option>
+                                </optgroup>
+                                <optgroup label="国际平台">
+                                    <option value="openai">OpenAI ChatGPT</option>
+                                    <option value="gemini">Google Gemini</option>
+                                    <option value="anthropic">Anthropic Claude</option>
+                                    <option value="openrouter">OpenRouter</option>
+                                    <option value="together">Together AI</option>
+                                    <option value="groq">Groq</option>
+                                    <option value="fireworks">Fireworks AI</option>
+                                    <option value="deepinfra">DeepInfra</option>
+                                </optgroup>
+                                <optgroup label="API 中转">
+                                    <option value="apiyi">APIYi</option>
+                                    <option value="token5u">Token5U</option>
+                                    <option value="aihubmix">AIHubMix</option>
+                                    <option value="closeai">CloseAI</option>
+                                    <option value="yusi">宇思 AI</option>
+                                </optgroup>
+                            </select>
+                            <button id="gptFetchModelsBtn" style="background:#5856d6; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer;">获取模型列表</button>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                            <input id="gptRegistrationCode" type="text" maxlength="4" placeholder="软件注册码 (PIN)" style="padding:8px; border-radius:8px; border:1px solid #ddd;" />
+                            <button id="gptUnlockDefaultBtn" style="background:#ff9500; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer;">解锁默认 API</button>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr; gap:8px;">
+                            <input id="gptQrImport" type="text" placeholder="扫码/粘贴导入配置 JSON 或 goldword:// 链接" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd;" />
+                            <button id="gptImportConfigBtn" style="background:#34c759; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer;">导入配置</button>
+                        </div>
+                        <div id="gptProviderHint" style="font-size:12px; color:#666; background:#f8f9fa; border-radius:8px; padding:8px;">选择平台后自动填充 Base URL 和推荐模型；自定义模式可手动填写。获取模型列表需要有效的 API Key。</div>
+
+                        <div style="display:grid; grid-template-columns:minmax(140px, 1fr) minmax(140px, 1fr); gap:8px;">
+                            <input id="gptTimeoutMs" type="number" min="3000" max="120000" step="1000" placeholder="超时毫秒（默认 30000）" style="padding:8px; border-radius:8px; border:1px solid #ddd;" />
+                            <label style="display:flex; align-items:center; gap:6px; font-size:14px; color:#555;"><input id="gptFallbackEnabled" type="checkbox" /> 主服务失败时启用备用源</label>
+                        </div>
+                        <input id="gptFallbackBaseUrl" type="text" placeholder="备用 API 基础地址（可选）" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd;" />
+                        <input id="gptFallbackModel" type="text" placeholder="备用模型名（可选）" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd;" />
+                        <input id="gptFallbackApiKey" type="password" placeholder="备用 API Key（留空则复用主 Key，仅本机保存）" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd;" />
+                        <div style="font-size:12px; color:#666;">默认源为财绅网关；密钥不会写入源码或 APK。聊天中出现过的旧 Key 应先轮换，再在本机填写。</div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <button id="gptSaveBtn" style="background:#007aff; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer;" data-i18n="buttons.saveSettings"></button>
+                            <button id="gptTestBtn" style="background:#00c4b4; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer;" data-i18n="buttons.testSettings"></button>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:14px; color:#555;">
+                                <input type="checkbox" id="cfgGptOnlyModeCheckbox" /> 仅使用GPT（禁用本地兜底）
+                            </label>
+                            <button id="gptEnhanceLabel" type="button" title="增强 服务调试工具的快捷选项" aria-label="GPT增强"
+                                    style="margin-left:auto; display:flex; align-items:center; background:#f0f6ff; color:#007aff; border:1px solid #d0e7ff; border-radius:8px; padding:6px 10px; font-size:13px; cursor:pointer;">
+                                <span data-i18n="buttons.gptEnhancement"></span>
+                            </button>
+                            <button id="exportVisitBackupBtn" style="background:#fff; color:#007aff; border:1px solid #d0e7ff; border-radius:8px; padding:6px 10px; font-size:13px; cursor:pointer;" data-i18n="buttons.exportVisit"></button>
+                        </div>
+                        <div id="gptTestStatus" style="margin-top:6px; color:#555; font-size:14px; min-height:20px;"></div>
+                        <!-- 卡片显示项配置：固定标签 + Prompt + 代表含义（存入数据库） -->
+                        <div style="margin-top:12px; border-top:1px solid #eee; padding-top:12px;">
+                            <div id="cardDisplayHeader" style="font-weight:600; margin-bottom:8px;">卡片显示项 - Prompt 与代表含义配置</div>
+                            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+                                <button id="cfgImportSystemPromptsBtn" style="background:#5856d6; color:#fff; border:none; border-radius:8px; padding:6px 10px; cursor:pointer;">导入系统 Prompt 模板</button>
+                                <button id="cfgEnableFieldPromptsBtn" style="background:#00c4b4; color:#fff; border:none; border-radius:8px; padding:6px 10px; cursor:pointer;">启用自定义 Prompt</button>
+                                <button id="cfgCopyAllPromptsBtn" style="background:#8e8e93; color:#fff; border:none; border-radius:8px; padding:6px 10px; cursor:pointer;">复制所有 Prompt</button>
+                                <button id="cfgImportAllPromptsBtn" style="background:#ff9f0a; color:#fff; border:none; border-radius:8px; padding:6px 10px; cursor:pointer;">导入所有 Prompt</button>
+                                <span id="cfgPromptStatus" style="color:#555; font-size:14px; min-height:20px;"></span>
+                            </div>
+                            <div style="display:grid; grid-template-columns: 180px 1fr; gap:8px; align-items:center;">
+                                <div id="displayContent" style="font-weight:500; color:#555;">显示内容</div>
+                                <div id="gptPromptLabel" style="font-weight:500; color:#555;">GPT 对应 Prompt（可编辑）</div>
+                                <div id="fixed_word">单词（固定）</div>
+                                <input id="cfgFieldPrompt_word" placeholder="例如：请返回该单词的英文原词" />
+                                <div id="fixed_chinese">中文解释（固定）</div>
+                                <input id="cfgFieldPrompt_chinese" placeholder="例如：给出简洁中文释义" />
+                                <div id="fixed_phonetic">音标（固定）</div>
+                                <input id="cfgFieldPrompt_phonetic" placeholder="例如：返回标准英式/美式音标" />
+                                <div id="fixed_pos">词性（固定）</div>
+                                <input id="cfgFieldPrompt_pos" placeholder="例如：返回主要词性（n/v/adj等）" />
+                                <div id="fixed_memory">记忆要点（固定）</div>
+                                <input id="cfgFieldPrompt_memory" placeholder="例如：给出1-2条记忆要点" />
+                                <div id="fixed_association">联想（固定）</div>
+                                <input id="cfgFieldPrompt_association" placeholder="例如：提供形象的联想描述" />
+                                <div id="fixed_definition">主要用法/定义（固定）</div>
+                                <input id="cfgFieldPrompt_definition" placeholder="例如：给出简洁定义与主要用法" />
+                                <div id="fixed_brief">简述（可选）</div>
+                                <input id="cfgFieldPrompt_brief" placeholder="例如：15字以内中文简述（可含音标/词性/搭配）" />
+                                <div id="fixed_collocation">固定搭配（固定）</div>
+            <input id="cfgFieldPrompt_collocation" placeholder="3个固定搭配，英文：中文解释；每一个解释占一行的Prompt" />
+                                <div id="fixed_example">例句（固定）</div>
+            <input id="cfgFieldPrompt_example" placeholder="用最基础的2500单词和这个单词造句 ，并且翻译成中文；一个造句3个不同句式表达，每行一个；" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            </div>
+        </div>
+
+        <!-- 统一注册/登录页面（覆盖层） —— 独立于标签页，始终可显示 -->
+        <div id="authPage" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); backdrop-filter: blur(2px); z-index: 2000;">
+            <div style="background:#fff; border-radius:12px; width: 60vw; margin: 8vh auto; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: 80vh; overflow-y:auto;">
+                <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:10px;">
+                    <h3 id="authHeader" style="margin:0;" data-i18n="sections.authTitle"></h3>
+                    <button id="authCloseBtn" style="border:none; background:#eee; border-radius:8px; padding:6px 10px; cursor:pointer;">返回</button>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                    <input id="authUserId" type="text" placeholder="账号（支持中文/英文/邮箱）" style="padding:8px; border-radius:8px; border:1px solid #ddd;" />
+                    <input id="authUserName" type="text" placeholder="显示名（可选）" style="padding:8px; border-radius:8px; border:1px solid #ddd;" />
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:8px;">
+                    <input id="authPin" type="password" placeholder="PIN（4位数字；管理员输入密码）" style="padding:8px; border-radius:8px; border:1px solid #ddd;" />
+                    <input id="authPinConfirm" type="password" placeholder="确认 PIN（注册时）" style="padding:8px; border-radius:8px; border:1px solid #ddd;" />
+                </div>
+                <div style="font-size:12px; color:#666; margin-top:6px;">提示：普通用户使用 4 位 PIN；管理员账号为隐藏账号，不在界面中提示。</div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+                    <button id="authRegisterBtn" style="background:#00c4b4; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer;">注册</button>
+                    <button id="authLoginBtn" style="background:#5856d6; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer;">登录</button>
+                    <button id="authLogoutBtn" style="background:#8e8e93; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer;">退出登录</button>
+                </div>
+                <div id="authStatus" style="margin-top:8px; color:#555; min-height:20px;"></div>
+            </div>
+        </div>
+
+        <!-- 登录弹窗（模态框） —— 独立于标签页 -->
+        <div id="loginModal" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.40); backdrop-filter: blur(2px); z-index: 2100;">
+            <div style="background:#fff; border-radius:12px; width: 420px; max-width: 90vw; margin: 14vh auto; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+                <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:10px;">
+                    <h3 style="margin:0;">用户登录</h3>
+                    <button id="loginModalCloseBtn" style="border:none; background:#eee; border-radius:8px; padding:6px 10px; cursor:pointer;">返回</button>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr; gap:8px;">
+                    <input id="loginModalUserId" type="text" placeholder="账号（支持中文/英文/邮箱）" style="padding:8px; border-radius:8px; border:1px solid #ddd;" />
+                    <input id="loginModalPin" type="password" placeholder="PIN（4位数字；管理员输入密码）" style="padding:8px; border-radius:8px; border:1px solid #ddd;" />
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+                    <button id="loginModalConfirmBtn" style="background:#5856d6; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer;">登录</button>
+                </div>
+                <div id="loginModalStatus" style="margin-top:8px; color:#555; min-height:20px;"></div>
+            </div>
+        </div>
+
+        <!-- 设置面板：全部设置单页显示，提供章节快捷跳转与当前章节高亮 -->
+        <script>
+            window.SettingsNav = {
+                go: function (key) {
+                    var el = document.getElementById('panel-' + key);
+                    if (el) try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+                },
+                close: function () { var p = document.getElementById('settingsPanel'); if (p) p.style.display = 'none'; },
+                spy: function (box) {
+                    var sections = [].slice.call(document.querySelectorAll('.settings-panel-section'));
+                    var jumps = [].slice.call(document.querySelectorAll('.settings-jump'));
+                    if (!sections.length || !jumps.length || !box) return;
+                    var onScroll = function () {
+                        var boxTop = box.getBoundingClientRect().top;
+                        var active = null;
+                        if (box.scrollTop < 20) {
+                            active = sections.length ? sections[0].id : '';
+                        } else {
+                            var H = 150;
+                            for (var i = 0; i < sections.length; i++) {
+                                var t = sections[i].getBoundingClientRect().top - boxTop;
+                                var b = sections[i].getBoundingClientRect().bottom - boxTop;
+                                if (t <= H && b > H) { active = sections[i].id; break; }
+                            }
+                            if (!active && sections.length) active = sections[sections.length - 1].id;
+                        }
+                        jumps.forEach(function (j) { j.classList.toggle('active', active === j.getAttribute('data-jump')); });
+                    };
+                    box.addEventListener('scroll', onScroll, { passive: true });
+                    onScroll();
+                }
+            };
+            document.addEventListener('DOMContentLoaded', function () {
+                var box = document.querySelector('.settings-content');
+                [].slice.call(document.querySelectorAll('.settings-jump')).forEach(function (b) {
+                    b.addEventListener('click', function () { var t = b.getAttribute('data-jump'); if (t) SettingsNav.go(t.replace('panel-', '')); });
+                });
+                SettingsNav.spy(box);
+            });
+        </script>
+    </div>
+
+    <script type="text/javascript">
+        // StorageAdapter 回退机制
+        window.SA = window.SA || (typeof StorageAdapter !== 'undefined' ? StorageAdapter : {
+            getItem: (key) => localStorage.getItem(key),
+            setItem: (key, value) => localStorage.setItem(key, value),
+            removeItem: (key) => localStorage.removeItem(key),
+            getJSON: (key) => {
+                try {
+                    const item = localStorage.getItem(key);
+                    return item ? JSON.parse(item) : null;
+                } catch (_) {
+                    return null;
+                }
+            },
+            setJSON: (key, value) => {
+                try {
+                    localStorage.setItem(key, JSON.stringify(value));
+                } catch (_) {}
+            }
+        });
+    </script>
+
+    <!-- 内置默认词库（296 预置词 + 追加生词清单）已抽离至 built-in-words.js，逻辑与原内联脚本一致 -->
+    <script src="built-in-words.js?v=1" charset="utf-8"></script>
+
+    <script src="storage.js" charset="utf-8"></script>
+<script src="i18n.js" charset="utf-8"></script>
+<script src="visit-backup.js" charset="utf-8"></script>
+<script src="word-schema.js" charset="utf-8"></script>
+    <script src="api-client.js" charset="utf-8"></script>
+    <script src="word-enhancement-service.js" charset="utf-8"></script>
+    <script src="db.js?v=3" charset="utf-8"></script>
+    <script src="built-in-models.js" charset="utf-8"></script>
+    <script src="ui.js?v=8" charset="utf-8"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function(){ try{ if (window.I18N && I18N.init) I18N.init(); }catch(_){} });
+    </script>
+<script src="app.js?v=4" charset="utf-8"></script>
+<script src="wordatlas.js?v=1" charset="utf-8"></script>
+<script src="version.js" charset="utf-8"></script>
+    <script>
+      // 支持从其他页面跳转自动打开“个人中心”
+      (function(){
+        try {
+          var params = new URLSearchParams(window.location.search || '');
+          if (params.get('open') === 'auth') {
+            // 等待UI初始化完成后触发首页“个人中心”按钮逻辑
+            var tryOpen = function(){
+              var btn = document.getElementById('openAuthPageMainBtn');
+              if (btn) { try { btn.click(); } catch(_) {} }
+              else { setTimeout(tryOpen, 100); }
+            };
+            setTimeout(tryOpen, 0);
+          }
+        } catch(e) {
+          try { console.warn('自动打开个人中心失败:', e); } catch(_){}
+        }
+      })();
+    </script>
+</body>
+</html>
