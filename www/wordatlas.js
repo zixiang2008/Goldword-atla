@@ -557,31 +557,53 @@
       var body = document.getElementById('waSheetBody');
       if (!sheet || !body) return;
       var wordText = ref.word;
-      body.innerHTML = '<div class="wa-back">' +
-        '<div class="wa-back-left details">' +
-          (entry && entry.senses && entry.senses.length ? '<h3 class="wa-eyebrow">释义</h3><ol class="wa-senses">' +
-            entry.senses.map(function (s) { return '<li><span class="pos">' + esc(s.pos) + '</span><span class="zh">' + esc(s.zh) + '</span>' +
-              (s.en ? '<span class="en">' + highlight(s.en, wordText) + '</span>' : '') + '</li>'; }).join('') + '</ol>' : '') +
-          (entry && entry.ex && entry.ex.length ? '<h3 class="wa-eyebrow">例句</h3><ul class="wa-examples">' +
-            entry.ex.map(function (x, i) { return '<li>' + (entry.ex.length > 1 ? '<span class="wa-ex-tag' + (i ? ' is-ielts' : '') + '">' + (i ? '雅思语境' : '日常') + '</span>' : '') +
-              '<p class="wa-ex-en">' + highlight(x.en, wordText) + ' <button type="button" class="wa-inline-speak" data-wa-audio="' +
-              esc(i === 0 ? Atlas.audio(ref, 'ex') || '' : (i === 1 ? Atlas.audio(ref, 'ex2') || '' : '')) + '" data-wa-text="' + esc(x.en) + '">🔊</button></p>' +
-              '<p class="wa-ex-zh">' + esc(x.zh) + '</p></li>'; }).join('') + '</ul>' : '') +
-          (entry && entry.col && entry.col.length ? '<h3 class="wa-eyebrow">常用搭配</h3><ul class="wa-collocations">' +
-            entry.col.map(function (c) { var p = splitPair(c); return '<li><span>' + esc(p.en) + '</span>' + (p.zh ? '<small>' + esc(p.zh) + '</small>' : '') + '</li>'; }).join('') + '</ul>' : '') +
-          (entry && entry.tip ? '<aside class="wa-tip"><b>💡</b><span>' + esc(entry.tip) + '</span></aside>' : '') +
-        '</div>' +
-        '<div class="wa-back-right">' +
-          '<div class="wa-chips">' + (ref.cefr ? '<span class="chip chip-level lv-' + esc(ref.cefr) + '">' + esc(ref.cefr) + '</span>' : '') +
-            '<span class="chip chip-topic">' + esc(ref.topicZh || '') + '</span></div>' +
-          '<p class="wa-specimen">№ ' + String(ref.order + 1).padStart(4, '0') + ' <i></i> WORD ATLAS</p>' +
-          '<h2 class="right-word">' + esc(wordText) + '</h2>' +
-          '<div class="wa-pron">' +
-            (entry && entry.uk ? '<button type="button" data-wa-audio="' + esc(Atlas.audio(ref, 'uk') || '') + '" data-wa-text="' + esc(wordText) + '"><em>英</em><span class="ipa">' + esc(entry.uk) + '</span> 🔊</button>' : '') +
-            (entry && entry.us ? '<button type="button" data-wa-audio="' + esc(Atlas.audio(ref, 'us') || '') + '" data-wa-text="' + esc(wordText) + '"><em>美</em><span class="ipa">' + esc(entry.us) + '</span> 🔊</button>' : '') +
-          '</div>' +
-          (Atlas.img(ref) ? '<img src="' + esc(Atlas.img(ref)) + '" alt="' + esc(wordText) + '" style="width:100%;border-radius:14px;margin-top:14px;box-shadow:var(--shadow-sm)">' : '') +
-        '</div></div>';
+      // Full reference entry — identical field mapping to the study card back
+      // (renderBack). Every field present in the atlas data must appear here.
+      var senses = entry && entry.senses || [];
+      var left = [];
+      left.push('<div class="wa-back-hero">' +
+        '<p class="wa-specimen">№ ' + String(ref.order + 1).padStart(4, '0') + ' <i></i> WORD ATLAS</p>' +
+        '<div class="wa-chips">' + (ref.cefr ? '<span class="chip chip-level lv-' + esc(ref.cefr) + '">' + esc(ref.cefr) + '</span>' : '') +
+          (ref.topicZh ? '<span class="chip chip-topic">' + esc(ref.topicZh) + '</span>' : '') + '</div>' +
+        (Atlas.img(ref) ? '<img class="wa-back-art" src="' + esc(Atlas.img(ref)) + '" alt="' + esc(wordText) + ' 插画" loading="lazy">' : '') +
+        '</div>');
+      if (senses.length) {
+        left.push('<h3 class="wa-eyebrow">释义 · Senses</h3><ol class="wa-senses">' +
+          senses.map(function (s) { return '<li><span class="pos">' + esc(s.pos) + '</span><span class="zh">' + esc(s.zh) + '</span>' +
+            (s.en ? '<span class="en">' + highlight(s.en, wordText) + '</span>' : '') + '</li>'; }).join('') + '</ol>');
+      }
+      if (entry && entry.ex && entry.ex.length) {
+        left.push('<h3 class="wa-eyebrow">例句 · Examples</h3><ul class="wa-examples">' +
+          entry.ex.map(function (x, i) { return '<li>' + (entry.ex.length > 1 ? '<span class="wa-ex-tag' + (i ? ' is-ielts' : '') + '">' + (i ? '雅思语境' : '日常') + '</span>' : '') +
+            '<p class="wa-ex-en">' + highlight(x.en, wordText) + ' <button type="button" class="wa-inline-speak" data-wa-audio="' +
+            esc(i === 0 ? Atlas.audio(ref, 'ex') || '' : (i === 1 ? Atlas.audio(ref, 'ex2') || '' : '')) + '" data-wa-text="' + esc(x.en) + '">🔊</button></p>' +
+            (x.zh ? '<p class="wa-ex-zh">' + esc(x.zh) + '</p>' : '') + '</li>'; }).join('') + '</ul>');
+      }
+      if (entry && entry.col && entry.col.length) {
+        left.push('<h3 class="wa-eyebrow">常用搭配 · Collocations</h3><ul class="wa-collocations">' +
+          entry.col.map(function (c) { var p = splitPair(c); return '<li><span lang="en">' + esc(p.en) + '</span>' + (p.zh ? '<small>' + esc(p.zh) + '</small>' : '') + '</li>'; }).join('') + '</ul>');
+      }
+      var rel = [];
+      if (entry && entry.fam && entry.fam.length) rel.push('<div><h3 class="wa-eyebrow">词族 · Family</h3><div class="wa-field">' + entry.fam.map(function (f) { return esc(typeof f === 'string' ? f : (f.word || f.text || '')); }).join(' · ') + '</div></div>');
+      if (entry && entry.syn && entry.syn.length) rel.push('<div><h3 class="wa-eyebrow">近义</h3><div class="wa-field">' + entry.syn.map(function (f) { return esc(typeof f === 'string' ? f : f.word); }).join(' · ') + '</div></div>');
+      if (entry && entry.ant && entry.ant.length) rel.push('<div><h3 class="wa-eyebrow">反义</h3><div class="wa-field">' + entry.ant.map(function (f) { return esc(typeof f === 'string' ? f : f.word); }).join(' · ') + '</div></div>');
+      if (rel.length) left.push(rel.join(''));
+      if (entry && entry.tip) left.push('<aside class="wa-tip"><b>💡</b><span>' + esc(entry.tip) + '</span></aside>');
+      if (entry && entry.note) left.push('<p class="wa-note">用法提醒：' + esc(entry.note) + '</p>');
+
+      var zhText = senses.length ? senses.map(function (s) { return s.zh; }).join('；') : ref.zh;
+      var posText = senses.map(function (s) { return s.pos; }).filter(Boolean).join(' ');
+      var right = [];
+      right.push('<div class="word right-word" lang="en">' + esc(wordText) + '</div>');
+      right.push('<div class="wa-field"><span class="label">中文解释</span><span class="value">' + esc(zhText) + '</span></div>');
+      right.push('<div class="wa-field"><span class="label">音标</span><span class="value wa-pron">' +
+        (entry && entry.uk ? '<button type="button" data-wa-audio="' + esc(Atlas.audio(ref, 'uk') || '') + '" data-wa-text="' + esc(wordText) + '"><em>英</em><span class="ipa">' + esc(entry.uk) + '</span> 🔊</button>' : '') +
+        (entry && entry.us ? '<button type="button" data-wa-audio="' + esc(Atlas.audio(ref, 'us') || '') + '" data-wa-text="' + esc(wordText) + '"><em>美</em><span class="ipa">' + esc(entry.us) + '</span> 🔊</button>' : '') +
+        '</span></div>');
+      right.push('<div class="wa-field"><span class="label">词性</span><span class="value">' + esc(posText) + '</span></div>');
+      right.push('<div class="wa-field"><span class="label">记忆要点</span><span class="value">' + esc(entry && entry.tip || '') + '</span></div>');
+      body.innerHTML = '<div class="wa-back"><div class="wa-back-left details">' + left.join('') +
+        '</div><div class="wa-back-right">' + right.join('') + '</div></div>';
       var acts = document.getElementById('waSheetActions');
       acts.innerHTML = '<button type="button" class="primary" id="waStudyThis">📚 加入学习卡</button>' +
         '<button type="button" id="waSpeakThis">🔊 朗读单词</button>' +
@@ -766,6 +788,14 @@
       } catch (_) {}
     });
   }
+
+  // Public hooks: useful for deep links / diagnostics / automated verification.
+  // Non-invasive — the UI binds to the same functions internally.
+  Atlas.openWord = openWord;
+  Atlas.switchView = switchView;
+  Atlas.closeSheet = closeSheet;
+  Atlas.refreshGallery = function () { renderGallery(true); };
+  Atlas.getGalleryState = function () { return gallery; };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
