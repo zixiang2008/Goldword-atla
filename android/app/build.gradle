@@ -9,7 +9,7 @@ android {
         applicationId "com.goldword.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
+        versionCode 4
         def pkgFile = file('../../package.json')
         def appVersion = '1.0.0'
         if (pkgFile.exists()) {

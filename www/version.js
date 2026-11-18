@@ -11,13 +11,36 @@
     return '';
   }
   function showOverlay(data){
-    const bg=document.createElement('div');
-    bg.style.position='fixed'; bg.style.inset='0'; bg.style.background='rgba(0,0,0,0.35)'; bg.style.zIndex='2000';
-    const panel=document.createElement('div');
-    panel.style.background='#fff'; panel.style.borderRadius='10px'; panel.style.width='min(80vw,520px)'; panel.style.margin='10vh auto'; panel.style.padding='12px'; panel.style.boxShadow='0 10px 30px rgba(0,0,0,0.12)'; panel.style.fontSize='13px'; panel.style.color='#333';
-    const pre=document.createElement('pre'); pre.textContent=JSON.stringify(data,null,2); pre.style.whiteSpace='pre-wrap'; pre.style.background='#f7f7f7'; pre.style.border='1px solid #eee'; pre.style.padding='10px';
-    const close=document.createElement('button'); close.textContent='关闭'; close.style.margin='8px 0'; close.onclick=function(){ try{ document.body.removeChild(bg);}catch(_){} };
-    panel.appendChild(close); panel.appendChild(pre); bg.appendChild(panel); document.body.appendChild(bg);
+    // 纸墨令牌 + 统一层级：高于登录层(2100)，Esc / 点遮罩 / 关闭按钮都能退出
+    var bg=document.createElement('div');
+    bg.className='wa-version-mask';
+    bg.setAttribute('role','dialog');
+    bg.setAttribute('aria-modal','true');
+    bg.setAttribute('aria-label','版本详情');
+    var panel=document.createElement('div');
+    panel.className='wa-version-panel';
+    var head=document.createElement('div');
+    head.className='wa-version-head';
+    var title=document.createElement('strong');
+    title.textContent='版本详情 / Version details';
+    var close=document.createElement('button');
+    close.type='button'; close.className='wa-version-close';
+    close.textContent='关闭'; close.setAttribute('aria-label','关闭版本详情');
+    function dismiss(){
+      try{ document.body.removeChild(bg); }catch(_){}
+      document.removeEventListener('keydown', onKey);
+    }
+    function onKey(e){ if(e.key==='Escape') dismiss(); }
+    close.onclick=dismiss;
+    bg.addEventListener('click', function(e){ if(e.target===bg) dismiss(); });
+    document.addEventListener('keydown', onKey);
+    head.appendChild(title); head.appendChild(close);
+    var pre=document.createElement('pre');
+    pre.className='wa-version-json';
+    pre.textContent=JSON.stringify(data,null,2);
+    panel.appendChild(head); panel.appendChild(pre);
+    bg.appendChild(panel);
+    document.body.appendChild(bg);
   }
   async function gatherDetails(){
     const local=await getJson('version.json');

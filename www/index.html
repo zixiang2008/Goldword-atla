@@ -980,6 +980,48 @@
             </div>
         </div>
 
+        <!-- 设置面板：全部设置单页显示，提供章节快捷跳转与当前章节高亮 -->
+        <script>
+            window.SettingsNav = {
+                go: function (key) {
+                    var el = document.getElementById('panel-' + key);
+                    if (el) try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+                },
+                close: function () { var p = document.getElementById('settingsPanel'); if (p) p.style.display = 'none'; },
+                spy: function (box) {
+                    var sections = [].slice.call(document.querySelectorAll('.settings-panel-section'));
+                    var jumps = [].slice.call(document.querySelectorAll('.settings-jump'));
+                    if (!sections.length || !jumps.length || !box) return;
+                    var onScroll = function () {
+                        var boxTop = box.getBoundingClientRect().top;
+                        var active = null;
+                        if (box.scrollTop < 20) {
+                            active = sections.length ? sections[0].id : '';
+                        } else {
+                            var H = 150;
+                            for (var i = 0; i < sections.length; i++) {
+                                var t = sections[i].getBoundingClientRect().top - boxTop;
+                                var b = sections[i].getBoundingClientRect().bottom - boxTop;
+                                if (t <= H && b > H) { active = sections[i].id; break; }
+                            }
+                            if (!active && sections.length) active = sections[sections.length - 1].id;
+                        }
+                        jumps.forEach(function (j) { j.classList.toggle('active', active === j.getAttribute('data-jump')); });
+                    };
+                    box.addEventListener('scroll', onScroll, { passive: true });
+                    onScroll();
+                }
+            };
+            document.addEventListener('DOMContentLoaded', function () {
+                var box = document.querySelector('.settings-content');
+                [].slice.call(document.querySelectorAll('.settings-jump')).forEach(function (b) {
+                    b.addEventListener('click', function () { var t = b.getAttribute('data-jump'); if (t) SettingsNav.go(t.replace('panel-', '')); });
+                });
+                SettingsNav.spy(box);
+            });
+        </script>
+    </div>
+
         <!-- 统一注册/登录页面（覆盖层） —— 独立于标签页，始终可显示 -->
         <div id="authPage" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); backdrop-filter: blur(2px); z-index: 2000;">
             <div style="background:#fff; border-radius:12px; width: 60vw; margin: 8vh auto; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: 80vh; overflow-y:auto;">
@@ -1022,48 +1064,6 @@
                 <div id="loginModalStatus" style="margin-top:8px; color:#555; min-height:20px;"></div>
             </div>
         </div>
-
-        <!-- 设置面板：全部设置单页显示，提供章节快捷跳转与当前章节高亮 -->
-        <script>
-            window.SettingsNav = {
-                go: function (key) {
-                    var el = document.getElementById('panel-' + key);
-                    if (el) try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
-                },
-                close: function () { var p = document.getElementById('settingsPanel'); if (p) p.style.display = 'none'; },
-                spy: function (box) {
-                    var sections = [].slice.call(document.querySelectorAll('.settings-panel-section'));
-                    var jumps = [].slice.call(document.querySelectorAll('.settings-jump'));
-                    if (!sections.length || !jumps.length || !box) return;
-                    var onScroll = function () {
-                        var boxTop = box.getBoundingClientRect().top;
-                        var active = null;
-                        if (box.scrollTop < 20) {
-                            active = sections.length ? sections[0].id : '';
-                        } else {
-                            var H = 150;
-                            for (var i = 0; i < sections.length; i++) {
-                                var t = sections[i].getBoundingClientRect().top - boxTop;
-                                var b = sections[i].getBoundingClientRect().bottom - boxTop;
-                                if (t <= H && b > H) { active = sections[i].id; break; }
-                            }
-                            if (!active && sections.length) active = sections[sections.length - 1].id;
-                        }
-                        jumps.forEach(function (j) { j.classList.toggle('active', active === j.getAttribute('data-jump')); });
-                    };
-                    box.addEventListener('scroll', onScroll, { passive: true });
-                    onScroll();
-                }
-            };
-            document.addEventListener('DOMContentLoaded', function () {
-                var box = document.querySelector('.settings-content');
-                [].slice.call(document.querySelectorAll('.settings-jump')).forEach(function (b) {
-                    b.addEventListener('click', function () { var t = b.getAttribute('data-jump'); if (t) SettingsNav.go(t.replace('panel-', '')); });
-                });
-                SettingsNav.spy(box);
-            });
-        </script>
-    </div>
 
     <script type="text/javascript">
         // StorageAdapter 回退机制

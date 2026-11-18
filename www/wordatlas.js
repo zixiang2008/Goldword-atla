@@ -274,7 +274,9 @@
     }
     if (!memo && entry && entry.tip) memo = entry.tip;
 
-    right.push('<div class="right-word">' + esc(wordText) + '</div>');
+    // 保留原 GoldWord 的 .word 类与 #back-word id，避免刷新元素引用为 null
+    // 以及依赖 back-word 的旧逻辑抛 "Cannot read properties of null"。
+    right.push('<div class="word right-word" id="back-word" lang="en">' + esc(wordText) + '</div>');
     right.push('<div class="wa-field"><span class="label">中文解释</span><span class="value">' + esc(chinese) + '</span></div>');
     // Both reference pronunciations (UK + US) with their own offline recordings.
     var prons = [];
@@ -606,8 +608,26 @@
   function closeSheet() { var s = document.getElementById('waSheet'); if (s) s.classList.remove('is-on'); }
 
   function switchView(name) {
+    // 切换一级视图时先收起所有二级/三级浮层，避免图鉴详情弹层或菜单残留到下一页
+    closeSheet();
+    try {
+      var sm = document.getElementById('waStyleMenu');
+      if (sm) {
+        sm.classList.remove('is-open');
+        var st = document.getElementById('waStyleTrigger'); var sp = document.getElementById('waStylePanel');
+        if (st) st.setAttribute('aria-expanded', 'false');
+        if (sp) sp.setAttribute('aria-hidden', 'true');
+      }
+      var amb = document.getElementById('waAmb');
+      if (amb) amb.classList.remove('is-open');
+    } catch (_) {}
     document.querySelectorAll('.wa-view').forEach(function (v) { v.classList.toggle('is-on', v.id === 'waView-' + name); });
     document.querySelectorAll('.wa-topnav button').forEach(function (b) { b.classList.toggle('is-on', b.getAttribute('data-wa-view') === name); });
+    // 离开图鉴时清空搜索词，回到今日卡片不应被上一次的图鉴筛选影响
+    if (name !== 'atlas' && typeof gallery !== 'undefined') {
+      gallery.query = '';
+      var s = document.getElementById('waSearch'); if (s) s.value = '';
+    }
     if (name === 'atlas') { buildFilters(); renderGallery(); }
     window.scrollTo(0, 0);
   }

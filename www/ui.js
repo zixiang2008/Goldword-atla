@@ -7,6 +7,17 @@
  * 注意：交互事件统一在 bindEvents 中绑定，并且仅由 App.init() 调用一次；
  * 避免在 UI.init() 内重复绑定，防止按钮行为重复触发。
  */
+// 纸墨设计系统：状态文案颜色统一入口。旧代码里散落的 #34c759/#ff3b30/#007aff
+// 统一映射为设计令牌，避免旧色值出现在设置面板/登录层。保留 hex 字面量仅作为
+// 内部语义标识（StatusBroadcast 仍据此判断 success/error/info）。
+function waStatusColor(el, color) {
+    if (!el) return;
+    el.classList.remove('wa-st-ok', 'wa-st-err', 'wa-st-info');
+    if (color === '#34c759') el.classList.add('wa-st-ok');
+    else if (color === '#ff3b30') el.classList.add('wa-st-err');
+    else el.classList.add('wa-st-info');
+}
+
 // UI相关功能
 const UI = {
     // DOM元素引用
@@ -269,7 +280,7 @@ const UI = {
                     // 预填默认游客账号，降低首次使用门槛
                     if (this.elements.loginModalUserId) this.elements.loginModalUserId.value = 'guest';
                     if (this.elements.loginModalPin) this.elements.loginModalPin.value = '0000';
-                    if (this.elements.loginModalStatus) { this.elements.loginModalStatus.textContent = '默认游客账号：guest / 0000'; this.elements.loginModalStatus.style.color = '#555'; }
+                    if (this.elements.loginModalStatus) { this.elements.loginModalStatus.textContent = '默认游客账号：guest / 0000'; waStatusColor(this.elements.loginModalStatus, '#555'); }
                 } else {
                     // 其次显示认证 Overlay，并切到“用户登录”模式
                     const overlay = this.elements.authPage || document.getElementById('authPage');
@@ -280,7 +291,7 @@ const UI = {
                         if (this.elements.authLoginBtn) this.elements.authLoginBtn.style.display = 'inline-block';
                         if (this.elements.authRegisterBtn) this.elements.authRegisterBtn.style.display = 'none';
                         if (this.elements.authLogoutBtn) this.elements.authLogoutBtn.style.display = 'none';
-                        if (this.elements.authStatus) { this.elements.authStatus.textContent = ''; this.elements.authStatus.style.color = '#555'; }
+                        if (this.elements.authStatus) { this.elements.authStatus.textContent = ''; waStatusColor(this.elements.authStatus, '#555'); }
                     } else {
                         // 兜底：打开设置面板并滚动到登录区域
                         if (this.elements.settingsPanel) this.elements.settingsPanel.style.display = 'block';
@@ -607,7 +618,7 @@ const UI = {
                             this.elements.loginModal.style.display = 'block';
                             if (this.elements.loginModalStatus) {
                                 this.elements.loginModalStatus.textContent = '';
-                                this.elements.loginModalStatus.style.color = '#555';
+                                waStatusColor(this.elements.loginModalStatus, '#555');
                             }
                             return;
                         }
@@ -621,7 +632,7 @@ const UI = {
                             if (this.elements.authLoginBtn) this.elements.authLoginBtn.style.display = 'inline-block';
                             if (this.elements.authRegisterBtn) this.elements.authRegisterBtn.style.display = 'none';
                             if (this.elements.authLogoutBtn) this.elements.authLogoutBtn.style.display = 'none';
-                            if (this.elements.authStatus) { this.elements.authStatus.textContent = ''; this.elements.authStatus.style.color = '#555'; }
+                            if (this.elements.authStatus) { this.elements.authStatus.textContent = ''; waStatusColor(this.elements.authStatus, '#555'); }
                             return;
                         }
 
@@ -648,7 +659,7 @@ const UI = {
                     if (loginBtn) loginBtn.style.display = 'none';
                     if (logoutBtn) logoutBtn.style.display = 'none';
                     // 清空状态提示
-                    if (this.elements.authStatus) { this.elements.authStatus.textContent = ''; this.elements.authStatus.style.color = '#555'; }
+                    if (this.elements.authStatus) { this.elements.authStatus.textContent = ''; waStatusColor(this.elements.authStatus, '#555'); }
                 });
             }
             if (this.elements.settingsMenuImportBtn) {
@@ -782,7 +793,7 @@ const UI = {
         const openAuthOverlay = () => {
             if (!this.elements.authPage) return;
             this.elements.authPage.style.display = 'block';
-            if (this.elements.authStatus) { this.elements.authStatus.textContent = ''; this.elements.authStatus.style.color = '#555'; }
+            if (this.elements.authStatus) { this.elements.authStatus.textContent = ''; waStatusColor(this.elements.authStatus, '#555'); }
             const _nameEl = document.getElementById('authUserName');
             const _confirmEl = document.getElementById('authPinConfirm');
             if (_nameEl) _nameEl.style.display = 'none';
@@ -823,26 +834,26 @@ const UI = {
                 if (!registering) {
                     if (nameEl) nameEl.style.display = '';
                     if (confirmEl) confirmEl.style.display = '';
-                    if (this.elements.authStatus) { this.elements.authStatus.textContent = '已切换到注册模式，请填写信息并再次点击注册'; this.elements.authStatus.style.color = '#007aff'; }
+                    if (this.elements.authStatus) { this.elements.authStatus.textContent = '已切换到注册模式，请填写信息并再次点击注册'; waStatusColor(this.elements.authStatus, '#007aff'); }
                     return;
                 }
                 const id = document.getElementById('authUserId')?.value?.trim();
                 const name = document.getElementById('authUserName')?.value?.trim();
                 const pin = document.getElementById('authPin')?.value || '';
                 const pinConfirm = document.getElementById('authPinConfirm')?.value || '';
-                if (!id) { this.elements.authStatus.textContent = '请输入账号'; this.elements.authStatus.style.color = '#ff3b30'; return; }
+                if (!id) { this.elements.authStatus.textContent = '请输入账号'; waStatusColor(this.elements.authStatus, '#ff3b30'); return; }
                 // 管理员账号由用户首次在本机创建，不再包含内置密码。
                 if (id === 'caishen') {
-                    if (pin.length < 8) { this.elements.authStatus.textContent = '管理员密码至少 8 位'; this.elements.authStatus.style.color = '#ff3b30'; return; }
-                    if (pin !== pinConfirm) { this.elements.authStatus.textContent = '两次密码不一致'; this.elements.authStatus.style.color = '#ff3b30'; return; }
+                    if (pin.length < 8) { this.elements.authStatus.textContent = '管理员密码至少 8 位'; waStatusColor(this.elements.authStatus, '#ff3b30'); return; }
+                    if (pin !== pinConfirm) { this.elements.authStatus.textContent = '两次密码不一致'; waStatusColor(this.elements.authStatus, '#ff3b30'); return; }
                     App.registerUser(id, name || '管理员', pin);
                 } else {
-                    if (!/^\d{4}$/.test(pin)) { this.elements.authStatus.textContent = 'PIN 必须为4位数字'; this.elements.authStatus.style.color = '#ff3b30'; return; }
-                    if (pin !== pinConfirm) { this.elements.authStatus.textContent = '两次 PIN 不一致'; this.elements.authStatus.style.color = '#ff3b30'; return; }
+                    if (!/^\d{4}$/.test(pin)) { this.elements.authStatus.textContent = 'PIN 必须为4位数字'; waStatusColor(this.elements.authStatus, '#ff3b30'); return; }
+                    if (pin !== pinConfirm) { this.elements.authStatus.textContent = '两次 PIN 不一致'; waStatusColor(this.elements.authStatus, '#ff3b30'); return; }
                     App.registerUser(id, name || id, pin);
                 }
                 this.elements.authStatus.textContent = '注册成功';
-                this.elements.authStatus.style.color = '#34c759';
+                waStatusColor(this.elements.authStatus, '#34c759');
             });
         }
         if (this.elements.authLoginBtn) {
@@ -850,13 +861,13 @@ const UI = {
                 // 直接使用覆盖层输入进行登录，不再依赖登录模态框
                 const id = document.getElementById('authUserId')?.value?.trim();
                 const pin = document.getElementById('authPin')?.value || '';
-                if (!id) { this.elements.authStatus.textContent = '请输入账号'; this.elements.authStatus.style.color = '#ff3b30'; return; }
+                if (!id) { this.elements.authStatus.textContent = '请输入账号'; waStatusColor(this.elements.authStatus, '#ff3b30'); return; }
                 if (id !== 'caishen') {
-                    if (!/^\d{4}$/.test(pin)) { this.elements.authStatus.textContent = 'PIN 必须为4位数字'; this.elements.authStatus.style.color = '#ff3b30'; return; }
+                    if (!/^\d{4}$/.test(pin)) { this.elements.authStatus.textContent = 'PIN 必须为4位数字'; waStatusColor(this.elements.authStatus, '#ff3b30'); return; }
                 }
                 App.loginUser(id, pin);
                 this.elements.authStatus.textContent = '登录成功';
-                this.elements.authStatus.style.color = '#34c759';
+                waStatusColor(this.elements.authStatus, '#34c759');
                 if (this.elements.authPage) this.elements.authPage.style.display = 'none';
                 if (window.SettingsNav) SettingsNav.go('account');
                 setTimeout(() => { openSettingsPanel(); }, 100);
@@ -872,14 +883,14 @@ const UI = {
             this.elements.loginModalConfirmBtn.addEventListener('click', () => {
                 const id = this.elements.loginModalUserId?.value?.trim();
                 const pin = this.elements.loginModalPin?.value || '';
-                if (!id) { if (this.elements.loginModalStatus) { this.elements.loginModalStatus.textContent = '请输入账号'; this.elements.loginModalStatus.style.color = '#ff3b30'; } return; }
+                if (!id) { if (this.elements.loginModalStatus) { this.elements.loginModalStatus.textContent = '请输入账号'; waStatusColor(this.elements.loginModalStatus, '#ff3b30'); } return; }
                 if (id === 'caishen') {
                     App.loginUser(id, pin);
                 } else {
-                    if (!/^\d{4}$/.test(pin)) { if (this.elements.loginModalStatus) { this.elements.loginModalStatus.textContent = 'PIN 必须为4位数字'; this.elements.loginModalStatus.style.color = '#ff3b30'; } return; }
+                    if (!/^\d{4}$/.test(pin)) { if (this.elements.loginModalStatus) { this.elements.loginModalStatus.textContent = 'PIN 必须为4位数字'; waStatusColor(this.elements.loginModalStatus, '#ff3b30'); } return; }
                     App.loginUser(id, pin);
                 }
-                if (this.elements.loginModalStatus) { this.elements.loginModalStatus.textContent = '登录成功'; this.elements.loginModalStatus.style.color = '#34c759'; }
+                if (this.elements.loginModalStatus) { this.elements.loginModalStatus.textContent = '登录成功'; waStatusColor(this.elements.loginModalStatus, '#34c759'); }
                 if (this.elements.loginModal) this.elements.loginModal.style.display = 'none';
                 if (this.elements.authPage) this.elements.authPage.style.display = 'none';
                 setTimeout(() => { openSettingsPanel(); }, 100);
@@ -888,7 +899,7 @@ const UI = {
         if (this.elements.authLogoutBtn) {
             this.elements.authLogoutBtn.addEventListener('click', () => {
                 App.logoutUser();
-                if (this.elements.authStatus) { this.elements.authStatus.textContent = '已退出登录'; this.elements.authStatus.style.color = '#007aff'; }
+                if (this.elements.authStatus) { this.elements.authStatus.textContent = '已退出登录'; waStatusColor(this.elements.authStatus, '#007aff'); }
                 // 重新打开设置面板以更新界面
                 setTimeout(() => {
                     openSettingsPanel();
@@ -974,7 +985,7 @@ const UI = {
                 try { if (DB.saveCardFieldConfig) DB.saveCardFieldConfig(map); } catch(_){ }
             if (this.elements.gptTestStatus) {
                 this.elements.gptTestStatus.textContent = '已保存设置（含卡片显示项）';
-                this.elements.gptTestStatus.style.color = '#007aff';
+                waStatusColor(this.elements.gptTestStatus, '#007aff');
             }
             try { if (window.StatusBroadcast && StatusBroadcast.post) StatusBroadcast.post('已保存设置（含卡片显示项）', 'success'); } catch(_){}
             });
@@ -986,7 +997,7 @@ const UI = {
                 try {
                     if (this.elements.gptTestStatus) {
                         this.elements.gptTestStatus.textContent = '保存→测试中...';
-                        this.elements.gptTestStatus.style.color = '#555';
+                        waStatusColor(this.elements.gptTestStatus, '#555');
                     }
                     try { if (window.StatusBroadcast && StatusBroadcast.post) StatusBroadcast.post('保存→测试中...', 'warning'); } catch(_){}
                     if (this.elements.gptSaveBtn) {
@@ -1011,13 +1022,13 @@ const UI = {
                     const result = await App.testGPTSettings(cfg);
                     if (this.elements.gptTestStatus) {
                         this.elements.gptTestStatus.textContent = result.ok ? `测试成功：${result.reply || '连接正常'}` : `测试失败：${result.error || '请检查配置'}`;
-                        this.elements.gptTestStatus.style.color = result.ok ? '#34c759' : '#ff3b30';
+                        waStatusColor(this.elements.gptTestStatus, result.ok ? '#34c759' : '#ff3b30');
                     }
                     try { if (window.StatusBroadcast && StatusBroadcast.post) StatusBroadcast.post(result.ok ? '测试成功' : (result.error || '测试失败'), result.ok ? 'success' : 'error'); } catch(_){}
                 } catch (e) {
                     if (this.elements.gptTestStatus) {
                         this.elements.gptTestStatus.textContent = `测试失败：${e.message || e}`;
-                        this.elements.gptTestStatus.style.color = '#ff3b30';
+                        waStatusColor(this.elements.gptTestStatus, '#ff3b30');
                     }
                     try { if (window.StatusBroadcast && StatusBroadcast.post) StatusBroadcast.post(`测试失败：${e.message || e}`, 'error'); } catch(_){}
                 }
@@ -1080,10 +1091,10 @@ const UI = {
                 const apiKey = this.elements.gptApiKey?.value || '';
                 const status = this.elements.gptTestStatus;
                 if (!baseUrl || !apiKey) {
-                    if (status) { status.textContent = '请先填写 Base URL 和 API Key'; status.style.color = '#ff3b30'; }
+                    if (status) { status.textContent = '请先填写 Base URL 和 API Key'; waStatusColor(status, '#ff3b30'); }
                     return;
                 }
-                if (status) { status.textContent = '正在获取模型列表...'; status.style.color = '#555'; }
+                if (status) { status.textContent = '正在获取模型列表...'; waStatusColor(status, '#555'); }
                 try {
                     const url = baseUrl.replace(/\/+$/, '') + '/models';
                     const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + apiKey } });
@@ -1095,9 +1106,9 @@ const UI = {
                         models.forEach(m => { const opt = document.createElement('option'); opt.value = m; opt.textContent = m; sel.appendChild(opt); });
                         if (models.length && this.elements.gptModel) this.elements.gptModel.value = models[0];
                     }
-                    if (status) { status.textContent = '已获取 ' + models.length + ' 个模型'; status.style.color = '#34c759'; }
+                    if (status) { status.textContent = '已获取 ' + models.length + ' 个模型'; waStatusColor(status, '#34c759'); }
                 } catch (e) {
-                    if (status) { status.textContent = '获取失败: ' + (e.message || e); status.style.color = '#ff3b30'; }
+                    if (status) { status.textContent = '获取失败: ' + (e.message || e); waStatusColor(status, '#ff3b30'); }
                 }
             });
         }
@@ -1110,10 +1121,10 @@ const UI = {
                     if (this.elements.gptBaseUrl) this.elements.gptBaseUrl.value = 'https://api.caisheng.art/v1';
                     if (this.elements.gptModel) this.elements.gptModel.value = 'deepseek-v4.1-flash';
                     if (this.elements.gptApiKey) this.elements.gptApiKey.value = ['sk-','a2a-','4026b1504b3db3b58e9954c362646d69'].join('');
-                    if (status) { status.textContent = '注册码正确，已启用默认 API'; status.style.color = '#34c759'; }
+                    if (status) { status.textContent = '注册码正确，已启用默认 API'; waStatusColor(status, '#34c759'); }
                     try { App.saveGPTSettings({ baseUrl: 'https://api.caisheng.art/v1', model: 'deepseek-v4.1-flash', apiKey: ['sk-','a2a-','4026b1504b3db3b58e9954c362646d69'].join(''), timeoutMs: 30000 }); } catch (_) {}
                 } else {
-                    if (status) { status.textContent = '注册码错误'; status.style.color = '#ff3b30'; }
+                    if (status) { status.textContent = '注册码错误'; waStatusColor(status, '#ff3b30'); }
                 }
             });
         }
@@ -1137,9 +1148,9 @@ const UI = {
                     if (cfg.baseUrl && this.elements.gptBaseUrl) this.elements.gptBaseUrl.value = cfg.baseUrl;
                     if (cfg.model && this.elements.gptModel) this.elements.gptModel.value = cfg.model;
                     if (cfg.apiKey && this.elements.gptApiKey) this.elements.gptApiKey.value = cfg.apiKey;
-                    if (status) { status.textContent = '配置已导入，请检查后保存'; status.style.color = '#34c759'; }
+                    if (status) { status.textContent = '配置已导入，请检查后保存'; waStatusColor(status, '#34c759'); }
                 } catch (e) {
-                    if (status) { status.textContent = '导入失败: ' + (e.message || e); status.style.color = '#ff3b30'; }
+                    if (status) { status.textContent = '导入失败: ' + (e.message || e); waStatusColor(status, '#ff3b30'); }
                 }
             });
         }
@@ -1157,13 +1168,13 @@ const UI = {
                             const r = await fetch(abs, { method: 'HEAD', cache: 'no-store' });
                             if (!r.ok) {
                                 const msg = `调试页不可用（${r.status}），请确保本地服务已启动或切换至应用内离线页面。`;
-                                if (UI.elements.gptTestStatus) { UI.elements.gptTestStatus.textContent = msg; UI.elements.gptTestStatus.style.color = '#ff3b30'; }
+                                if (UI.elements.gptTestStatus) { UI.elements.gptTestStatus.textContent = msg; waStatusColor(UI.elements.gptTestStatus, '#ff3b30'); }
                                 try { if (window.StatusBroadcast && StatusBroadcast.post) StatusBroadcast.post(msg, 'error'); } catch(_){}
                                 return;
                             }
                         } catch (err) {
                             const msg = '网络错误：无法连接到调试页，请在设置中查看帮助或启用本地服务。';
-                            if (UI.elements.gptTestStatus) { UI.elements.gptTestStatus.textContent = msg; UI.elements.gptTestStatus.style.color = '#ff3b30'; }
+                            if (UI.elements.gptTestStatus) { UI.elements.gptTestStatus.textContent = msg; waStatusColor(UI.elements.gptTestStatus, '#ff3b30'); }
                             try { if (window.StatusBroadcast && StatusBroadcast.post) StatusBroadcast.post(msg, 'error'); } catch(_){}
                             return;
                         }
@@ -1211,13 +1222,13 @@ const UI = {
                     setVal('cfgFieldPrompt_brief', tpl.DEFINITION_BRIEF_CN15 || '给出中文简述（≤30字），JSON返回{"definition":"…"}');
             if (this.elements.cfgPromptStatus) {
                 this.elements.cfgPromptStatus.textContent = '已导入系统模板（可继续调整）';
-                this.elements.cfgPromptStatus.style.color = '#5856d6';
+                waStatusColor(this.elements.cfgPromptStatus, '#5856d6');
             }
             try { if (window.StatusBroadcast && StatusBroadcast.post) StatusBroadcast.post('已导入系统模板', 'success'); } catch(_){}
                 } catch (e) {
             if (this.elements.cfgPromptStatus) {
                 this.elements.cfgPromptStatus.textContent = '导入失败：模板不可用';
-                this.elements.cfgPromptStatus.style.color = '#ff3b30';
+                waStatusColor(this.elements.cfgPromptStatus, '#ff3b30');
             }
             try { if (window.StatusBroadcast && StatusBroadcast.post) StatusBroadcast.post('导入失败：模板不可用', 'error'); } catch(_){}
                 }
@@ -1230,7 +1241,7 @@ if (UI.elements.cfgEnableFieldPromptsBtn) {
         try {
             if (UI.elements.cfgPromptStatus) {
                 UI.elements.cfgPromptStatus.textContent = '已启用自定义 Prompt（服务将优先使用你填写的）';
-                UI.elements.cfgPromptStatus.style.color = '#00c4b4';
+                waStatusColor(UI.elements.cfgPromptStatus, '#00c4b4');
             }
             try { if (window.StatusBroadcast && StatusBroadcast.post) StatusBroadcast.post('已启用自定义 Prompt', 'success'); } catch(_){}
 
@@ -1258,7 +1269,7 @@ if (UI.elements.cfgEnableFieldPromptsBtn) {
             if (!currentWord) {
             if (UI.elements.gptTestStatus) {
                 UI.elements.gptTestStatus.textContent = '未找到当前单词，请在卡片或测试框中输入';
-                UI.elements.gptTestStatus.style.color = '#cc0000';
+                waStatusColor(UI.elements.gptTestStatus, '#cc0000');
             }
             try { if (window.StatusBroadcast && StatusBroadcast.post) StatusBroadcast.post('未找到当前单词', 'error'); } catch(_){}
                 return;
@@ -1266,7 +1277,7 @@ if (UI.elements.cfgEnableFieldPromptsBtn) {
 
             if (UI.elements.gptTestStatus) {
                 UI.elements.gptTestStatus.textContent = `执行GPT：${currentWord}`;
-                UI.elements.gptTestStatus.style.color = '#555';
+                waStatusColor(UI.elements.gptTestStatus, '#555');
             }
             try { if (window.StatusBroadcast && StatusBroadcast.post) StatusBroadcast.post(`执行GPT：${currentWord}`, 'info'); } catch(_){}
 
@@ -1286,19 +1297,19 @@ if (UI.elements.cfgEnableFieldPromptsBtn) {
 
             if (UI.elements.gptTestStatus) {
                 UI.elements.gptTestStatus.textContent = '生成完成：简述/搭配/例句已更新';
-                UI.elements.gptTestStatus.style.color = '#34c759';
+                waStatusColor(UI.elements.gptTestStatus, '#34c759');
             }
             try { if (window.StatusBroadcast && StatusBroadcast.post) StatusBroadcast.post('生成完成：简述/搭配/例句已更新', 'success'); } catch(_){}
         } catch (e) {
             console.error(e);
             if (UI.elements.cfgPromptStatus) {
                 UI.elements.cfgPromptStatus.textContent = '启用失败：请稍后重试';
-                UI.elements.cfgPromptStatus.style.color = '#ff3b30';
+                waStatusColor(UI.elements.cfgPromptStatus, '#ff3b30');
             }
             try { if (window.StatusBroadcast && StatusBroadcast.post) StatusBroadcast.post('启用失败：请稍后重试', 'error'); } catch(_){}
             if (UI.elements.gptTestStatus) {
                 UI.elements.gptTestStatus.textContent = '生成失败，请检查API设置或网络';
-                UI.elements.gptTestStatus.style.color = '#cc0000';
+                waStatusColor(UI.elements.gptTestStatus, '#cc0000');
             }
             try { if (window.StatusBroadcast && StatusBroadcast.post) StatusBroadcast.post('生成失败，请检查API设置或网络', 'error'); } catch(_){}
         }
@@ -1324,7 +1335,7 @@ if (UI.elements.cfgCopyAllPromptsBtn) {
         const setStatus = (msg, color) => {
             if (UI.elements.cfgPromptStatus) {
                 UI.elements.cfgPromptStatus.textContent = msg;
-                UI.elements.cfgPromptStatus.style.color = color || '#555';
+                waStatusColor(UI.elements.cfgPromptStatus, color || '#555');
             }
             try { if (window.StatusBroadcast && StatusBroadcast.post) StatusBroadcast.post(msg, color === '#34c759' ? 'success' : (color === '#ff3b30' ? 'error' : 'info')); } catch(_){}
         };
@@ -1353,7 +1364,7 @@ if (UI.elements.cfgImportAllPromptsBtn) {
         const setStatus = (msg, color) => {
             if (UI.elements.cfgPromptStatus) {
                 UI.elements.cfgPromptStatus.textContent = msg;
-                UI.elements.cfgPromptStatus.style.color = color || '#555';
+                waStatusColor(UI.elements.cfgPromptStatus, color || '#555');
             }
             try { if (window.StatusBroadcast && StatusBroadcast.post) StatusBroadcast.post(msg, color === '#34c759' ? 'success' : (color === '#ff3b30' ? 'error' : 'info')); } catch(_){}
         };
@@ -1420,18 +1431,18 @@ if (UI.elements.cfgImportAllPromptsBtn) {
             this.elements.ttsTestBtn.addEventListener('click', async () => {
                 if (this.elements.ttsTestStatus) {
                     this.elements.ttsTestStatus.textContent = '测试中...';
-                    this.elements.ttsTestStatus.style.color = '#555';
+                    waStatusColor(this.elements.ttsTestStatus, '#555');
                 }
                 try {
                     const ok = await App.testSpeech();
                     if (this.elements.ttsTestStatus) {
                         this.elements.ttsTestStatus.textContent = ok ? '测试成功：可以发音' : '测试失败：请检查语音引擎';
-                        this.elements.ttsTestStatus.style.color = ok ? '#34c759' : '#ff3b30';
+                        waStatusColor(this.elements.ttsTestStatus, ok ? '#34c759' : '#ff3b30');
                     }
                 } catch (e) {
                     if (this.elements.ttsTestStatus) {
                         this.elements.ttsTestStatus.textContent = `测试失败：${e.message || e}`;
-                        this.elements.ttsTestStatus.style.color = '#ff3b30';
+                        waStatusColor(this.elements.ttsTestStatus, '#ff3b30');
                     }
                 }
             });
@@ -1916,6 +1927,8 @@ if (UI.elements.cfgImportAllPromptsBtn) {
             // 固定字段标签
             ['fixed_word','fixed_chinese','fixed_phonetic','fixed_pos','fixed_memory','fixed_association','fixed_definition','fixed_collocation','fixed_example']
                 .forEach(function(id){ setText(document.getElementById(id), map[id]); });
+            // 同步 data-i18n 节点：I18N 以本函数的短码为唯一状态源
+            if (window.I18N && typeof I18N.setLanguage === 'function') I18N.setLanguage(lang);
         };
         // 暴露以便 App 触发刷新
         this.applyLanguage = applyLanguage;
@@ -2120,11 +2133,8 @@ if (UI.elements.cfgImportAllPromptsBtn) {
         const el = this.elements.countdownLeft;
         if (!el) return;
         el.textContent = value || '';
-        // 颜色循环
-        const colors = ['#007aff','#ff3b30','#34c759','#ff9500','#5856d6','#00c4b4','#ff2d55','#8e8e93'];
-        const idx = this.state.countdownColorIndex % colors.length;
-        el.style.color = colors[idx];
-        this.state.countdownColorIndex = (this.state.countdownColorIndex + 1) % colors.length;
+        // 纸墨风格：倒计时用单一强调色，不再走彩虹色循环
+        el.style.color = 'var(--terra-ink)';
         // 字体大小：以 stats 容器高度的 80% 作为最大值
         const stats = document.querySelector('.stats');
         const h = stats ? stats.clientHeight : window.innerHeight;
@@ -2486,7 +2496,7 @@ if (UI.elements.cfgImportAllPromptsBtn) {
                     holder.id = gptBlockId;
                     holder.style.marginBottom = '6px';
                     holder.style.fontSize = '0.95em';
-                    holder.style.color = '#8b5c3e';
+                    holder.style.color = 'var(--ink-3)';
                     holder.textContent = '正在查询 GPT 释义...';
                     rightCol.prepend(holder);
                     this.fetchGPTBrief(wordText).then(txt => {

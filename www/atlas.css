@@ -29,8 +29,13 @@
   --shadow-sm: 0 1px 2px rgba(30, 38, 64, 0.06), 0 2px 6px -2px rgba(30, 38, 64, 0.06);
   --shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 1px 2px rgba(30, 38, 64, 0.05), 0 18px 40px -24px rgba(30, 38, 64, 0.28);
   --shadow-lg: 0 30px 80px -30px rgba(20, 26, 46, 0.45), 0 8px 24px -12px rgba(20, 26, 46, 0.2);
-  --serif: "Fraunces", "Noto Serif CJK SC", "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
-  --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Segoe UI", "Microsoft YaHei", "Noto Sans SC", Roboto, sans-serif;
+  --serif: "Fraunces", "Noto Serif CJK SC", "Noto Serif SC", "Songti SC", "STSong", "Noto Serif CJK JP", "Noto Serif Thai", Georgia, serif;
+  --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Segoe UI", "Microsoft YaHei", "Noto Sans SC", "Noto Sans CJK JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans Thai", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* 音标独立字体栈：IPA 专用字形，避免落到系统默认字体 */
+  --ipa: "Noto Sans IPA", "Doulos SIL", "Charis SIL", "Gentium Plus", "Fraunces", "Noto Serif CJK SC", serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* 彩色语义底（sage / terra / ochre）上的前景色，深浅主题都保持可读 */
+  --on-accent: #fffdf8;
   --r-sm: 10px;
   --r: 16px;
   --r-lg: 24px;
@@ -70,8 +75,31 @@
   --shadow-lg: 0 30px 80px -20px rgba(0,0,0,.75);
   --primary: #f2ebdd; --success: #97b88e; --secondary: #19213a;
   --bg: #0d1120; --text: #f2ebdd; --border: rgba(242,235,221,.14);
+  --on-accent: #fffdf8;
   color-scheme: dark;
 }
+
+/* ---------- 多语言字体约定 ----------
+   标题/词头一律衬线 (--serif)，正文一律无衬线 (--sans)，音标一律 --ipa。
+   I18N.apply() 会把当前语言写入 <html lang>，下面按语言精调字形顺序，
+   保证泰文/日文/西文不落到错误的汉字字形，同时不破坏纸墨风格。 */
+:lang(zh), :lang(zh-CN) {
+  --serif: "Fraunces", "Noto Serif CJK SC", "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
+  --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", Roboto, sans-serif;
+}
+:lang(ja) {
+  --serif: "Fraunces", "Noto Serif CJK JP", "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif CJK SC", Georgia, serif;
+  --sans: -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans CJK JP", "PingFang SC", "Microsoft YaHei", Roboto, sans-serif;
+}
+:lang(th) {
+  --serif: "Noto Serif Thai", "Fraunces", Georgia, serif;
+  --sans: "Noto Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+}
+:lang(es) {
+  --serif: "Fraunces", Georgia, "Noto Serif", serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+.wa-pron .ipa, .ipa { font-family: var(--ipa) !important; }
 
 * { box-sizing: border-box; }
 html { scroll-padding-top: calc(var(--top) + 12px); }
@@ -256,7 +284,7 @@ body.paused { background: var(--paper); }
 .wa-art-chips { position: absolute; left: 14px; top: 14px; display: flex; gap: 6px; flex-wrap: wrap; }
 .wa-art-hint {
   position: absolute; left: 14px; bottom: 14px; right: 14px;
-  font-size: 11px; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.5);
+  font-size: 11px; color: var(--on-accent); text-shadow: 0 1px 4px rgba(0,0,0,.5);
   opacity: .9;
 }
 .wa-info {
@@ -349,7 +377,7 @@ mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 2
   background: var(--card); color: var(--ink-2);
   min-height: 36px; padding: 7px 14px; font-size: 13px;
 }
-.wa-review-btn.active { background: var(--terra); color: #fff; border-color: transparent; }
+.wa-review-btn.active { background: var(--terra); color: var(--on-accent); border-color: transparent; }
 
 /* ---------- controls ---------- */
 .controls { width: min(1180px, 100%); margin: 0 auto; }
@@ -361,8 +389,8 @@ mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 2
 }
 .buttons button:hover, .buttons select:hover, .buttons-secondary button:hover, .buttons-secondary select:hover { transform: none; box-shadow: var(--shadow); }
 .buttons .flip-button, .buttons .next-button { background: var(--ink); color: var(--paper); border-color: transparent; }
-.buttons .correct-button { background: var(--sage); color: #fff; border-color: transparent; }
-.buttons .auto-on.auto-button { background: var(--ochre); color: #fff; border-color: transparent; }
+.buttons .correct-button { background: var(--sage); color: var(--on-accent); border-color: transparent; }
+.buttons .auto-on.auto-button { background: var(--ochre); color: var(--on-accent); border-color: transparent; }
 .stats {
   width: min(1180px, 100%); margin: 8px auto 0;
   background: var(--card); border: 1px solid var(--line);
@@ -393,9 +421,9 @@ mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 2
 .review-buttons { width: min(1180px, 100%); margin: 0 auto; }
 
 /* ---------- gallery ---------- */
-#atlasView .wa-head { margin: 6px 0 16px; }
-#atlasView h2 { font: 500 clamp(26px, 3.4vw, 40px)/1.15 var(--serif); margin: 6px 0; }
-#atlasView .wa-lead { color: var(--ink-2); font-size: 13px; margin: 0 0 16px; }
+#waView-atlas .wa-head { margin: 6px 0 16px; }
+#waView-atlas h2 { font: 500 clamp(26px, 3.4vw, 40px)/1.15 var(--serif); margin: 6px 0; }
+#waView-atlas .wa-lead { color: var(--ink-2); font-size: 13px; margin: 0 0 16px; }
 .wa-filters { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
 .wa-filter-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .wa-filter-row .wa-row-label { font-size: 11px; color: var(--ink-3); min-width: 48px; font-weight: 600; }
@@ -566,6 +594,11 @@ mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 2
   color: var(--ink-3) !important;
   padding: 8px 11px !important;
 }
+/* 状态文案语义色：JS 的 waStatusColor() 挂载 class，优先级高于上面的默认灰。
+   遵循规范：正确用 sage / 错误用 terra / 提示用 terra-ink。 */
+#settingsPanel .wa-st-ok, #authPage .wa-st-ok, #loginModal .wa-st-ok { color: var(--sage-ink) !important; }
+#settingsPanel .wa-st-err, #authPage .wa-st-err, #loginModal .wa-st-err { color: var(--terra-ink) !important; font-weight: 600 !important; }
+#settingsPanel .wa-st-info, #authPage .wa-st-info, #loginModal .wa-st-info { color: var(--terra-ink) !important; }
 
 /* Buttons on legacy surfaces: one pill language, semantic accents by role. */
 #settingsPanel button,
@@ -605,7 +638,7 @@ mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 2
 #settingsPanel #cfgEnableFieldPromptsBtn,
 #settingsPanel #cfgImportAllPromptsBtn,
 #authPage #authRegisterBtn {
-  background: var(--sage-ink) !important; color: #fff !important; border-color: transparent !important;
+  background: var(--sage-ink) !important; color: var(--on-accent) !important; border-color: transparent !important;
 }
 #settingsPanel #gptExtractBtn,
 #settingsPanel #gptTestBtn,
@@ -613,9 +646,9 @@ mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 2
 #settingsPanel #ttsTestBtn,
 #settingsPanel #importTextBtn,
 #settingsPanel #cfgImportAllPromptsBtn {
-  background: var(--terra) !important; color: #fff !important; border-color: transparent !important;
+  background: var(--terra) !important; color: var(--on-accent) !important; border-color: transparent !important;
 }
-#settingsPanel #clearDataBtn { background: var(--terra-ink) !important; color: #fff !important; border-color: transparent !important; }
+#settingsPanel #clearDataBtn { background: var(--terra-ink) !important; color: var(--on-accent) !important; border-color: transparent !important; }
 #settingsPanel #authLogoutBtn,
 #settingsPanel #authCloseBtn,
 #settingsPanel #closeSettingsBtn,
@@ -765,5 +798,43 @@ mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 2
   min-height: 40px;
 }
 .review-buttons button:hover { transform: none !important; box-shadow: var(--shadow) !important; background: var(--paper-2) !important; }
-#addNewWordBtn.active { background: var(--sage) !important; color: #fff !important; border-color: transparent !important; }
-#dontRememberBtn.active, #dontRememberTopBtn.active { background: var(--terra) !important; color: #fff !important; border-color: transparent !important; }
+#addNewWordBtn.active { background: var(--sage) !important; color: var(--card) !important; border-color: transparent !important; }
+#dontRememberBtn.active, #dontRememberTopBtn.active { background: var(--terra) !important; color: var(--card) !important; border-color: transparent !important; }
+
+/* 版本详情弹层：与纸墨令牌一致，层级高于登录覆盖层 */
+.wa-version-mask {
+  position: fixed; inset: 0; z-index: 2200;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 10vh var(--gutter) 4vh;
+  background: rgba(20, 24, 40, .42) !important;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  overflow-y: auto;
+}
+.wa-version-panel {
+  width: min(560px, 94vw); max-height: 82dvh; overflow: auto;
+  background: var(--card); color: var(--ink);
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg); padding: 18px 20px;
+  font: 400 13px/1.6 var(--sans);
+  animation: wa-sheet-pop .25s var(--ease);
+}
+.wa-version-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 12px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.wa-version-head strong { font: 600 20px/1.2 var(--serif); color: var(--ink); }
+.wa-version-close {
+  border: 1px solid var(--line-strong) !important; border-radius: 999px !important;
+  background: var(--card-2) !important; color: var(--ink-2) !important;
+  padding: 7px 14px !important; min-height: 36px; cursor: pointer !important;
+  font: 600 12px/1 var(--sans) !important;
+}
+.wa-version-close:hover { background: var(--paper-2) !important; color: var(--ink) !important; }
+.wa-version-json {
+  margin: 0; padding: 12px 14px; white-space: pre-wrap; word-break: break-word;
+  background: var(--paper-2); border: 1px solid var(--line);
+  border-radius: var(--r-sm); color: var(--ink-2);
+  font: 400 12px/1.6 var(--mono) !important;
+}
+@media (prefers-reduced-motion: reduce) { .wa-version-panel { animation: none; } }

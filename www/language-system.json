@@ -1,10 +1,13 @@
 {
-  "appName": "GoldWord",
+  "appName": "Goldword-atlas",
   "appSlogan": "每一个记住的单词，都是一枚金币",
   "languages": {
     "zh-CN": { "name": "简体中文", "flag": "🇨🇳", "rtl": false },
     "en-US": { "name": "English (US)", "flag": "🇺🇸", "rtl": false },
-    "en-GB": { "name": "English (UK)", "flag": "🇬🇧", "rtl": false }
+    "en-GB": { "name": "English (UK)", "flag": "🇬🇧", "rtl": false },
+    "th-TH": { "name": "ภาษาไทย", "flag": "🇹🇭", "rtl": false },
+    "ja-JP": { "name": "日本語", "flag": "🇯🇵", "rtl": false },
+    "es-ES": { "name": "Español", "flag": "🇪🇸", "rtl": false }
   },
   "translations": {
     "zh-CN": {
@@ -72,6 +75,72 @@
         "exportVisit": "Export Visits"
       },
       "sections": { "voiceTest": "Voice Test", "authTitle": "User Register / Login" }
+    },
+    "th-TH": {
+      "app": {
+        "title": "Goldword-atlas — ทุกคำที่จำได้ คือเหรียญทอง",
+        "status": { "checking": "กำลังตรวจสอบ...", "ready": "พร้อม", "working": "กำลังทำงาน", "error": "ข้อผิดพลาด", "disabled": "ปิดใช้งาน" },
+        "languagePreview": "ตัวอย่างภาษา"
+      },
+      "buttons": {
+        "autoPlay": "เล่นอัตโนมัติ",
+        "flipCard": "พลิกการ์ด",
+        "remember": "จำได้",
+        "speakWord": "ออกเสียง",
+        "dontRemember": "ยังจำไม่ได้",
+        "addNewWord": "เพิ่มคำใหม่",
+        "personalCenter": "ศูนย์ส่วนตัว",
+        "saveSettings": "บันทึกการตั้งค่า",
+        "testSettings": "ทดสอบการตั้งค่า",
+        "gptEnhancement": "เพิ่ม GPT",
+        "checkStatus": "ตรวจสอบสถานะ",
+        "exportVisit": "ส่งออกประวัติ"
+      },
+      "sections": { "voiceTest": "ทดสอบเสียง", "authTitle": "ลงทะเบียน / เข้าสู่ระบบ" }
+    },
+    "ja-JP": {
+      "app": {
+        "title": "Goldword-atlas — 覚えた単語は、すべてコインになる",
+        "status": { "checking": "確認中...", "ready": "準備完了", "working": "処理中", "error": "エラー", "disabled": "無効" },
+        "languagePreview": "言語プレビュー"
+      },
+      "buttons": {
+        "autoPlay": "自動再生",
+        "flipCard": "カードを裏返す",
+        "remember": "覚えた",
+        "speakWord": "発音する",
+        "dontRemember": "まだ覚えていない",
+        "addNewWord": "新しい単語",
+        "personalCenter": "マイページ",
+        "saveSettings": "設定を保存",
+        "testSettings": "設定をテスト",
+        "gptEnhancement": "GPT 拡張",
+        "checkStatus": "ステータスを確認",
+        "exportVisit": "履歴をエクスポート"
+      },
+      "sections": { "voiceTest": "音声テスト", "authTitle": "登録 / ログイン" }
+    },
+    "es-ES": {
+      "app": {
+        "title": "Goldword-atlas — Cada palabra recordada es una moneda",
+        "status": { "checking": "Comprobando...", "ready": "Listo", "working": "Trabajando", "error": "Error", "disabled": "Desactivado" },
+        "languagePreview": "Vista previa de idioma"
+      },
+      "buttons": {
+        "autoPlay": "Reproducción automática",
+        "flipCard": "Voltear tarjeta",
+        "remember": "Recordado",
+        "speakWord": "Pronunciar",
+        "dontRemember": "No lo recuerdo",
+        "addNewWord": "Añadir palabra",
+        "personalCenter": "Centro personal",
+        "saveSettings": "Guardar ajustes",
+        "testSettings": "Probar ajustes",
+        "gptEnhancement": "Mejora GPT",
+        "checkStatus": "Comprobar estado",
+        "exportVisit": "Exportar visitas"
+      },
+      "sections": { "voiceTest": "Prueba de voz", "authTitle": "Registro / Inicio de sesión" }
     }
   }
 }
