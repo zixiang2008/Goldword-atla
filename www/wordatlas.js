@@ -711,8 +711,8 @@
         if (more && more.style.display !== 'none' && more.getBoundingClientRect().top < window.innerHeight + 500) loadMore();
       }, 120);
     }, { passive: true });
+    // Ctrl/Cmd+K 打开图鉴搜索；Esc 由下方统一的 handleEsc 按层级处理
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') closeSheet();
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); switchView('atlas'); var s = document.getElementById('waSearch'); if (s) s.focus(); }
     });
     var mask = document.getElementById('waSheet');
@@ -746,8 +746,39 @@
       document.addEventListener('click', function (e) {
         if (styleMenu && !styleMenu.contains(e.target)) closeStyleMenu();
       });
-      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeStyleMenu(); });
     }
+
+    // 统一的 Esc 处理：严格按 z 轴优先级只关闭「最上面一层」，
+    // 避免原先多处独立监听导致一次 Esc 同时关掉详情弹层、菜单与设置面板。
+    function handleEsc() {
+      // 版本详情弹层自带 Esc 监听（z-index 最高），交给它自己关闭
+      if (document.querySelector('.wa-version-mask')) return false;
+      var sheet = document.getElementById('waSheet');
+      if (sheet && sheet.classList.contains('is-on')) { closeSheet(); return true; }
+      var sm = document.getElementById('waStyleMenu');
+      if (sm && sm.classList.contains('is-open')) { closeStyleMenu(); return true; }
+      var amb = document.getElementById('waAmb');
+      if (amb && amb.classList.contains('is-open')) {
+        amb.classList.remove('is-open');
+        var ab = document.getElementById('waAmbBtn'); if (ab) ab.setAttribute('aria-expanded', 'false');
+        return true;
+      }
+      var lm = document.getElementById('loginModal');
+      if (lm && lm.style.display && lm.style.display !== 'none') { lm.style.display = 'none'; return true; }
+      var ap = document.getElementById('authPage');
+      if (ap && ap.style.display && ap.style.display !== 'none') { ap.style.display = 'none'; return true; }
+      var sp = document.getElementById('settingsPanel');
+      if (sp && sp.style.display && sp.style.display !== 'none') {
+        try { if (window.SettingsNav && SettingsNav.close) SettingsNav.close(); else sp.style.display = 'none'; }
+        catch (_) { sp.style.display = 'none'; }
+        return true;
+      }
+      return false;
+    }
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      if (handleEsc()) { try { e.stopImmediatePropagation(); } catch (_) {} }
+    });
   }
 
   function boot() {
@@ -768,6 +799,8 @@
       if (requested) {
         var ref = Atlas.findLoose(requested);
         if (ref) {
+          // ?word= 一定在「今日」卡片视图呈现；否则卡片会在隐藏视图中更新、用户看不到变化
+          switchView('study');
           Atlas.loadEntry(ref).then(function (entry) {
             var obj = wordCardObj(ref, entry);
             try {

@@ -153,9 +153,7 @@
         box.classList.remove('is-open');
         btn.setAttribute('aria-expanded', 'false');
       });
-      document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') { box.classList.remove('is-open'); btn.setAttribute('aria-expanded', 'false'); }
-      });
+      // Esc 关闭由 wordatlas.js 的统一 handleEsc 处理（按层级只关最上层），此处不再重复监听
     }
     if (vol) {
       vol.oninput = function () {
